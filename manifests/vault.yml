@@ -1,0 +1,36 @@
+---
+name: vault
+
+releases:
+- name: vault
+  version: latest
+
+instance_groups:
+- instances: 1
+  name: vault
+  networks: [{name: private, static_ips: 10.0.31.195, default: [dns, gateway]}]
+  persistent_disk: 4096
+  properties:
+    vault:
+      backend:
+        use_file: true
+      ha:
+        redirect_address: https://vault.gcp.crdant.io
+  vm_type:  n1-standard-1
+  stemcell: trusty
+  azs: [z1]
+  jobs:
+  - name: vault
+    release: vault
+
+stemcells:
+- alias: trusty
+  os: ubuntu-trusty
+  version: latest
+
+update:
+  canaries: 1
+  canary_watch_time: 1000-30000
+  max_in_flight: 50
+  serial: false
+  update_watch_time: 1000-30000

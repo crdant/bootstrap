@@ -1,0 +1,5 @@
+bbl-state.json
+keys/*
+!keys/README.md
+work/*
+!work/README.md

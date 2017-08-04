@@ -1,0 +1,153 @@
+---
+name: concourse
+
+releases:
+- name: concourse
+  version: latest
+- name: garden-runc
+  version: latest
+
+stemcells:
+- alias: trusty
+  os: ubuntu-trusty
+  version: latest
+
+instance_groups:
+- name: web
+  instances: 1
+  # replace with a VM type from your BOSH Director's cloud config
+  vm_type: n1-standard-1
+  vm_extensions:
+  # replace with a VM extension from your BOSH Director's cloud config that will attach
+  # this instance group to your ELB
+  - lb
+  stemcell: trusty
+  azs: [z1]
+  networks: [{name: private}]
+  jobs:
+  - name: atc
+    release: concourse
+    properties:
+      bind_port: 80
+      tls_bind_port: 443
+      # replace with your CI's externally reachable URL, e.g. https://ci.foo.com
+      external_url: https://concourse.gcp.crdant.io
+
+      # replace with username/password, or configure GitHub auth
+      basic_auth_username: main
+      basic_auth_password: crooked-blossom-haply-afflict
+
+      # replace with your SSL cert and key
+      tls_cert: |
+        -----BEGIN CERTIFICATE-----
+        MIIEzTCCA7WgAwIBAgIJAKfTD29uPLqoMA0GCSqGSIb3DQEBCwUAMIGfMQswCQYD
+        VQQGEwJVUzELMAkGA1UECBMCTUExEjAQBgNVBAcTCUNhbWJyaWRnZTESMBAGA1UE
+        ChMJY3JkYW50LmlvMRwwGgYDVQQLExNDb250aW51b3VzIERlbGl2ZXJ5MRgwFgYD
+        VQQDFA8qLmdjcC5jcmRhbnQuaW8xIzAhBgkqhkiG9w0BCQEWFGNkYW50b25pb0Bw
+        aXZvdGFsLmlvMB4XDTE3MDgwNDAyNTE0M1oXDTE4MDgwNDAyNTE0M1owgZ8xCzAJ
+        BgNVBAYTAlVTMQswCQYDVQQIEwJNQTESMBAGA1UEBxMJQ2FtYnJpZGdlMRIwEAYD
+        VQQKEwljcmRhbnQuaW8xHDAaBgNVBAsTE0NvbnRpbnVvdXMgRGVsaXZlcnkxGDAW
+        BgNVBAMUDyouZ2NwLmNyZGFudC5pbzEjMCEGCSqGSIb3DQEJARYUY2RhbnRvbmlv
+        QHBpdm90YWwuaW8wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCnCg3u
+        Nnlg/CB8X9/CvthRCKy63DG8k+bH81OuY8cmtAZ9ItuC03e62ppGsqTqQrsSAcTx
+        r3kyPw2iL1jNO/PwhD6V1zmghGh3gI8wrIQSviByJ4YOjuH7Q6DB3/T6Rkbpy12Q
+        N/ScZ2Se8kscPr9Afv4P/stRDrjnRr8fbNuw9Y/rNGcbzb4AeOhHvMGFP64WfIs1
+        x3gEVUb8T7a3jhEKD/8Fp5HIttfBVC1ztiO2agA4/mFMQ9cYrQfzWZlgLY0RAsmN
+        P3Iamw5U2MjuOtUN9A1FyyvTOuS6osztQqSIii4XKMcQFURD3LBP2KIbTBbb4UBA
+        +eCXB8vQ1naIy2YlAgMBAAGjggEIMIIBBDAdBgNVHQ4EFgQUPLF0nkXat7zhIb+0
+        1HzaT09LfxMwgdQGA1UdIwSBzDCByYAUPLF0nkXat7zhIb+01HzaT09LfxOhgaWk
+        gaIwgZ8xCzAJBgNVBAYTAlVTMQswCQYDVQQIEwJNQTESMBAGA1UEBxMJQ2FtYnJp
+        ZGdlMRIwEAYDVQQKEwljcmRhbnQuaW8xHDAaBgNVBAsTE0NvbnRpbnVvdXMgRGVs
+        aXZlcnkxGDAWBgNVBAMUDyouZ2NwLmNyZGFudC5pbzEjMCEGCSqGSIb3DQEJARYU
+        Y2RhbnRvbmlvQHBpdm90YWwuaW+CCQCn0w9vbjy6qDAMBgNVHRMEBTADAQH/MA0G
+        CSqGSIb3DQEBCwUAA4IBAQBfVqiVtgK8APiM4VYqRPgMldJnVCYI6+KpIIXLeIRg
+        hP0Zypgs5OCdik+2QMM9I9XAxfXM8Xuq21DlZmHGzfWHBkq8C6TvF17DNnnE7mP6
+        TqHxO7EDAYQd3bktkLGVid500+vf8VzWwOw4AY3dSbHx5FAB4MDhmbYMw4GLb+zX
+        FHvo8iqDxk3oyi2OJtj1AL722g/1tFRwodz/XrCks9BDXibo1ufAIacwd8rSL4ch
+        wAxa4dmAT9N4t0l3YaKF2Oz1T0flCndkJqodYo8DPdra9A03oV3Cb72wQ8h6NHaN
+        0uq/eSgrlNYTtWbEp/INkwc5qC69VUAYsgIHEIoASlcJ
+        -----END CERTIFICATE-----
+      tls_key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        MIIEpAIBAAKCAQEA5vRDenkLS0PTDtk1yAsQg6eIoGP2CBk/L9FqF12GEQIgb6kE
+        iJOMCdWQa/uU63LaUui1X8tGP8EFXFdWZHU9jBfa2kNIsQ1wCh9yAwcWu3kgGxWn
+        89fTRavRPAGGk8MmsvhBzW4VuOkqOxclX0mxhEAUKf6Rb3jLfXC7JoEttZU9a516
+        LTNhSb/8RQsqRuAP48QIEWQB/clUAM7C0uFDM0noUK2t2l0Re8ZDjDVVlFFtpgnC
+        Xj0VmNWwAuzzAiVML/4QENx4NWUnHrgcColknfxBXx3UGqNem4lAsmAqt5/aRmuS
+        uGuBTFxz0G3RbIcffiGSKUqIM/4yKyTE/6ctWQIDAQABAoIBAQCFvYdh4bxvjkwn
+        OhNRz0513stYjepIUE5t42f7NdZP/RpJbufIKyEaBMkILvzSx4S0JDv7yBvbCWyQ
+        R6cor1e/y4SZhgMPPEfYJNOB+1XnpEG6TXUf2KhonRGiHQQQhx7e3rJEQu5jUOp6
+        o3Gp12PrwKuskdUoZxv3fRNzPbT5g+PP+Ocex4IZcgpwy2cvVNIgLzjj3rbCSy/s
+        NqMi0Zsm15D1glxjp+Txfq0YmFm3q3ikr6R+R2DmX6C3zn8pvRZ1N8tj4amlM64E
+        dzAjM4VIBIlH48hjyxo6DKYvovqD135Y9oRxbt2mMd8JRTARGrZTpps2OsbmFrp1
+        7EJh2t4xAoGBAP5/zM/lOsmD1XotLhN5GkLvqUKUurh9ji7n1AwFNWBjSR7ObqrS
+        4pcX/nWZhiKOlTFDZzm57D9WgilDdV58MdgJCB7QcI1VT7excPX+QgkP68sObPBi
+        z1cNgA5PMMPx8FSbBH76LCFHN71zRV9JzQRgtUQuCPi1bCWWFBsdD/Y9AoGBAOhQ
+        6082NLCQM0sXWGQVHsVs6+4N0/Y/VSJPGFTVuHkuWtdpK7od1oYQTNzvS4uazcB+
+        4h9s6l74/fA2JY36ffOq9mWgvaLapsDBwfekjFIe/JntxGcJT6C+ud/alIJjwPpz
+        tl5C798gOuBr4BBdI1qKceeC1bSI+zxDGheBkWFNAoGARfAk/rTF9P7vuYWU9fD/
+        0IlAAHYS4gRPAIDg+vSreHOQcpDURMlzT4ZefT7VZ8W7JjCZu3lmfPlvB5vsMyz6
+        HZ5NxvoNFCnvoFF484EN8KOZbtHmCiF9TTT+jfAhPJfOLdHz6Fkjq3mAzeVRmSAU
+        4TEaX0QvXvmsYJ/fopvX+RkCgYBdjRBk8ogfPcJaD8mZa+PbTrRnRYxAklpfGYjL
+        yNCjg+Yy7ngcV52mmPPK2FYMnscSKEY4r2xl2FCyJavT07ZapFLas/MJnJEf+CZ6
+        6flTrIS+G8BGWbqGGafSHDxHkZIJiQU8Sio8KMdsziQJkugEstGRj98s9yhsqPzd
+        0GBR1QKBgQDL932KbjQKXEpABWI2RN9qN5YFvWWLd2BXQ13ce+WkWxAN1Yp+MPqw
+        fysiTGoGEqRtxZ68ITIzXy5Znv3S7qQmT5dVlkyzQU9wVQWdVCeQvnn/Sxim/mqF
+        gHYoVW8/irHUQ83LZYYLxcjoECWIwgUzTIonMvQv2VhX+rQhWIMePg==
+        -----END RSA PRIVATE KEY-----
+
+      postgresql_database: &atc_db atc
+  - name: tsa
+    release: concourse
+    properties: {}
+
+- name: db
+  instances: 1
+  # replace with a VM type from your BOSH Director's cloud config
+  vm_type: n1-standard-1
+  stemcell: trusty
+  # replace with a disk type from your BOSH Director's cloud config
+  persistent_disk_type: 5GB
+  azs: [z1]
+  networks: [{name: private}]
+  jobs:
+  - name: postgresql
+    release: concourse
+    properties:
+      databases:
+      - name: *atc_db
+        # make up a role and password
+        role: atc
+        password: flourish-languish-naif-mert
+
+- name: worker
+  instances: 1
+  # replace with a VM type from your BOSH Director's cloud config
+  vm_type: n1-standard-1
+  vm_extensions:
+  # replace with a VM extension from your BOSH Director's cloud config that will attach
+  # sufficient ephemeral storage to VMs in this instance group.
+  - 50GB_ephemeral_disk
+  stemcell: trusty
+  azs: [z1]
+  networks: [{name: private}]
+  jobs:
+  - name: groundcrew
+    release: concourse
+    properties: {}
+  - name: baggageclaim
+    release: concourse
+    properties: {}
+  - name: garden
+    release: garden-runc
+    properties:
+      garden:
+        listen_network: tcp
+        listen_address: 0.0.0.0:7777
+
+update:
+  canaries: 1
+  max_in_flight: 1
+  serial: false
+  canary_watch_time: 1000-60000
+  update_watch_time: 1000-60000
