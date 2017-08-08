@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
+set -e
 
 echo "Configuring service accounts..."
 gcloud iam service-accounts --project "${PROJECT}" create "${SERVICE_ACCOUNT_NAME}" --display-name "BOSH Boot Loader (bbl)" --no-user-output-enabled
@@ -17,7 +18,6 @@ bosh_client_secret=`bbl director-password`
 bosh_ca_cert=`bbl director-ca-cert`
 bosh_director_address=`bbl director-address`
 bosh alias-env --environment="${bosh_director_address}" --ca-cert="${bosh_ca_cert}" "${ENVIRONMENT_NAME}"
-bbl ssh-key > ${KEY_DIR}/id_${SUBDOMAIN_TOKEN}.pem
 
 echo "Logging into the new director..."
 bosh log-in -e "${ENVIRONMENT_NAME}" --client="${bosh_client}" --client-secret="${bosh_client_secret}"
