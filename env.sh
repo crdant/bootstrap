@@ -26,3 +26,5 @@ export KEYDIR
 export WORKDIR
 export KEYFILE
 export MANIFEST_DIR
+
+export JUMPBOX_IP

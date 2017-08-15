@@ -6,7 +6,7 @@ DOMAIN_TOKEN=`echo ${DOMAIN} | tr . -`
 SUBDOMAIN="gcp.${DOMAIN}"
 SUBDOMAIN_TOKEN=`echo ${SUBDOMAIN} | tr . -`
 
-ENVIRONMENT_NAME="bbl-${SUBDOMAIN_TOKEN}"
+ENVIRONMENT_NAME="bbl-${SUBDOMAIN_TOKEN}-jump"
 
 REGION="us-east1"
 STORAGE_LOCATION="us"
@@ -22,3 +22,7 @@ KEYDIR="${BASEDIR}/keys"
 WORKDIR="${BASEDIR}/work"
 KEYFILE="${KEYDIR}/${PROJECT}-${SERVICE_ACCOUNT_NAME}.json"
 MANIFEST_DIR="${BASEDIR}/manifests"
+
+if [ -f "${BASEDIR}/bbl-state.json" ] ; then
+  JUMPBOX=`jq -r '.jumpbox.url' ${BASEDIR}/bbl-state.json | cut -d':' -f1 `
+fi
