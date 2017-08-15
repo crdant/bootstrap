@@ -54,7 +54,7 @@ releases () {
 
 deploy () {
   bbl create-lbs --type concourse
-  bosh -e ${ENVIRONMENT_NAME} -d concourse deploy ${MANIFEST_DIR}/concourse.yml
+  bosh -n -e ${ENVIRONMENT_NAME} -d concourse deploy ${MANIFEST_DIR}/concourse.yml
 }
 
 ssl_certificates
