@@ -10,9 +10,12 @@ gcloud iam service-accounts --project "${PROJECT}" keys create "${KEYFILE}"  --i
 gcloud projects add-iam-policy-binding "${PROJECT}" --member "serviceAccount:${SERVICE_ACCOUNT}" --role "roles/editor" --no-user-output-enabled
 
 echo "Creating the BOSH director..."
+set +e
 bbl up --iaas gcp --gcp-service-account-key "${KEYFILE}" --gcp-project-id "${PROJECT}" --gcp-zone "${AVAILABILITY_ZONE}" --gcp-region "${REGION}" --jumpbox
+set -e
 
 echo "Configuring BOSH client for the new director..."
+eval "$(bbl print-env)"
 bosh_client=`bbl director-username`
 bosh_client_secret=`bbl director-password`
 bosh_ca_cert=`bbl director-ca-cert`
