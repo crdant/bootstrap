@@ -25,5 +25,5 @@ ETCDIR="${BASEDIR}/etc"
 MANIFEST_DIR="${BASEDIR}/manifests"
 
 if [ -f "${BASEDIR}/bbl-state.json" ] ; then
-  JUMPBOX=`jq -r '.jumpbox.url' ${BASEDIR}/bbl-state.json | cut -d':' -f1 `
+  JUMPBOX=`bbl jumpbox-address | cut -d':' -f1 `
 fi
