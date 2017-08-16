@@ -7,6 +7,13 @@ BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
 
 ssl_certificates () {
+  LB_KEY_FILE="${KEYDIR}/web-${SUBDOMAIN_TOKEN}.key"
+  LB_CERT_FILE="${KEYDIR}/web-${SUBDOMAIN_TOKEN}.crt"
+
+  export ATC_KEY_FILE="${KEYDIR}/atc-${SUBDOMAIN_TOKEN}.key"
+  export ATC_CERT_FILE="${KEYDIR}/atc-${SUBDOMAIN_TOKEN}.crt"
+  export ATC_VAULT_TOKEN_FILE="${KEYDIR}/atc-${SUBDOMAIN_TOKEN}.token"
+
   echo "Creating SSL certificate for load balancers..."
 
   COMMON_NAME="*.${SUBDOMAIN}"
@@ -18,7 +25,7 @@ ssl_certificates () {
   EMAIL="${ACCOUNT}"
   SUBJECT="/C=${COUNTRY}/ST=${STATE}/L=${CITY}/O=${ORGANIZATION}/OU=${ORG_UNIT}/CN=${COMMON_NAME}/emailAddress=${EMAIL}"
 
-  openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${KEYDIR}/concourse.${SUBDOMAIN_TOKEN}.key" -out "${KEYDIR}/${SUBDOMAIN_TOKEN}.crt" -subj "${SUBJECT}" > /dev/null
+  openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${LB_KEY_FILE}" -out "${LB_CERT_FILE}" -subj "${SUBJECT}" > /dev/null
 
   echo "SSL certificate for load balanacers created and stored at ${KEYDIR}/${SUBDOMAIN_TOKEN}.crt, private key stored at ${KEYDIR}/${SUBDOMAIN_TOKEN}.key."
 
@@ -33,7 +40,7 @@ ssl_certificates () {
   EMAIL="${ACCOUNT}"
   SUBJECT="/C=${COUNTRY}/ST=${STATE}/L=${CITY}/O=${ORGANIZATION}/OU=${ORG_UNIT}/CN=${COMMON_NAME}/emailAddress=${EMAIL}"
 
-  openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${KEYDIR}/atc-${SUBDOMAIN_TOKEN}.key" -out "${KEYDIR}/atc-${SUBDOMAIN_TOKEN}.crt" -subj "${SUBJECT}" > /dev/null
+  openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${ATC_KEY_FILE}" -out "${ATC_CERT_FILE}" -subj "${SUBJECT}" > /dev/null
 }
 
 stemcell () {
@@ -52,12 +59,23 @@ releases () {
   bosh -e ${ENVIRONMENT_NAME} upload-release $garden_runc_file
 }
 
+prepare_manifest () {
+  manifest=${WORKDIR}/concourse.yml
+  spruce merge --prune tls ${MANIFEST_DIR}/concourse.yml > $manifest
+}
+
 deploy () {
   bbl create-lbs --type concourse
-  bosh -n -e ${ENVIRONMENT_NAME} -d concourse deploy ${MANIFEST_DIR}/concourse.yml
+  bosh -n -e ${ENVIRONMENT_NAME} -d concourse deploy ${manifest}
+}
+
+init () {
+  vault
 }
 
 ssl_certificates
 stemcell
 releases
+prepare_manifest
 deploy
+init
