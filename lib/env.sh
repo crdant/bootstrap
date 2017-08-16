@@ -19,8 +19,9 @@ SERVICE_ACCOUNT_NAME="${ENVIRONMENT_NAME}"
 SERVICE_ACCOUNT="${SERVICE_ACCOUNT_NAME}@${PROJECT}.iam.gserviceaccount.com"
 
 KEYDIR="${BASEDIR}/keys"
-WORKDIR="${BASEDIR}/work"
 KEYFILE="${KEYDIR}/${PROJECT}-${SERVICE_ACCOUNT_NAME}.json"
+WORKDIR="${BASEDIR}/work"
+ETCDIR="${BASEDIR}/etc"
 MANIFEST_DIR="${BASEDIR}/manifests"
 
 if [ -f "${BASEDIR}/bbl-state.json" ] ; then

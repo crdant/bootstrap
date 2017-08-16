@@ -23,8 +23,9 @@ export SERVICE_ACCOUNT_NAME
 export SERVICE_ACCOUNT
 
 export KEYDIR
-export WORKDIR
 export KEYFILE
+export WORKDIR
+export ETCDIR
 export MANIFEST_DIR
 
-export JUMPBOX_IP
+export JUMPBOX
