@@ -8,14 +8,13 @@ releases:
 instance_groups:
 - instances: 1
   name: vault
-  networks: [{name: private, static_ips: 10.0.31.195, default: [dns, gateway]}]
+  networks: [{name: private, static_ips: (( grab $VAULT_STATIC_IP )), default: [dns, gateway]}]
   persistent_disk: 4096
   properties:
     vault:
       backend:
         use_file: true
-      ha:
-        redirect_address: https://vault.gcp.crdant.io
+
   vm_type:  n1-standard-1
   stemcell: trusty
   azs: [z1]

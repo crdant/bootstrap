@@ -38,66 +38,16 @@ instance_groups:
       basic_auth_password: crooked-blossom-haply-afflict
 
       # replace with your SSL cert and key
-      tls_cert: |
-        -----BEGIN CERTIFICATE-----
-        MIIEzTCCA7WgAwIBAgIJAJsq2+1UCRP4MA0GCSqGSIb3DQEBCwUAMIGfMQswCQYD
-        VQQGEwJVUzELMAkGA1UECBMCTUExEjAQBgNVBAcTCUNhbWJyaWRnZTESMBAGA1UE
-        ChMJY3JkYW50LmlvMRwwGgYDVQQLExNDb250aW51b3VzIERlbGl2ZXJ5MRgwFgYD
-        VQQDFA8qLmdjcC5jcmRhbnQuaW8xIzAhBgkqhkiG9w0BCQEWFGNkYW50b25pb0Bw
-        aXZvdGFsLmlvMB4XDTE3MDgwNDIxMDA1NVoXDTE4MDgwNDIxMDA1NVowgZ8xCzAJ
-        BgNVBAYTAlVTMQswCQYDVQQIEwJNQTESMBAGA1UEBxMJQ2FtYnJpZGdlMRIwEAYD
-        VQQKEwljcmRhbnQuaW8xHDAaBgNVBAsTE0NvbnRpbnVvdXMgRGVsaXZlcnkxGDAW
-        BgNVBAMUDyouZ2NwLmNyZGFudC5pbzEjMCEGCSqGSIb3DQEJARYUY2RhbnRvbmlv
-        QHBpdm90YWwuaW8wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC1sg4b
-        WkSpK2SR5H3my69s0qL5VVSnWXIBzZmehcQ0Oxec/T0zSqrJRStj32b65GGnzDbk
-        QBiRu2UXyMClJ+au6k87dNc448rwgCzn7B6Hqcc5lvj3GA9t0F/mIiC/v54yKC60
-        wIWZj3OxOiIGHJw68GcsJks8En8Q8VHn0Ih4BpXRnI0aiT8IC78E8liZcaF2L6ol
-        bVG0S+yExqB1ruFmNFyegROn7pRrRzWIVfoqNHurfKonMGe927NenwodyJeUHyzU
-        +/foMXOonKA/anCwRlhgYdJO0VkI27fNaHTsPVo/rlKhbfgYfX4j3YsxiCbBg8Vk
-        SBzw3IKXPiYVX+ttAgMBAAGjggEIMIIBBDAdBgNVHQ4EFgQU8NpZSkh2wNE5JBJR
-        MCt3Mg4i+QMwgdQGA1UdIwSBzDCByYAU8NpZSkh2wNE5JBJRMCt3Mg4i+QOhgaWk
-        gaIwgZ8xCzAJBgNVBAYTAlVTMQswCQYDVQQIEwJNQTESMBAGA1UEBxMJQ2FtYnJp
-        ZGdlMRIwEAYDVQQKEwljcmRhbnQuaW8xHDAaBgNVBAsTE0NvbnRpbnVvdXMgRGVs
-        aXZlcnkxGDAWBgNVBAMUDyouZ2NwLmNyZGFudC5pbzEjMCEGCSqGSIb3DQEJARYU
-        Y2RhbnRvbmlvQHBpdm90YWwuaW+CCQCbKtvtVAkT+DAMBgNVHRMEBTADAQH/MA0G
-        CSqGSIb3DQEBCwUAA4IBAQAodkYh6E3hBchCli3Z3TOAzUMP2WhQUO6/EHAXR1pA
-        JIF4NPzOSX6ml2uoYyCpnsvRlcl9mfwcj4ReZKZZqQ2qu8iPGlIcP6yg4SrfXwNL
-        6PK5zTIgbe73BRybs26s/nMmOrm5NcnpJ1ysm6FesvVvFr+3PegPWvHpP8W6tRex
-        f/d+83UdNqPr5r5ZRRzPyjedYOxWTzpVrJ199thvmBBcn2teZpCBBm1wEO7s4T3X
-        BQ7dOSoZGtjMOqbqeeE17NFDMEbvId6o60L3LEuUYPPSXEvf1XqYAQvfsEsA1OsO
-        naCZme4qKKbib9fLeDPRJBO70hrxNl+Dq4dN6v/fM237
-        -----END CERTIFICATE-----
-      tls_key: |
-        -----BEGIN RSA PRIVATE KEY-----
-        MIIEowIBAAKCAQEAtbIOG1pEqStkkeR95suvbNKi+VVUp1lyAc2ZnoXENDsXnP09
-        M0qqyUUrY99m+uRhp8w25EAYkbtlF8jApSfmrupPO3TXOOPK8IAs5+weh6nHOZb4
-        9xgPbdBf5iIgv7+eMigutMCFmY9zsToiBhycOvBnLCZLPBJ/EPFR59CIeAaV0ZyN
-        Gok/CAu/BPJYmXGhdi+qJW1RtEvshMagda7hZjRcnoETp+6Ua0c1iFX6KjR7q3yq
-        JzBnvduzXp8KHciXlB8s1Pv36DFzqJygP2pwsEZYYGHSTtFZCNu3zWh07D1aP65S
-        oW34GH1+I92LMYgmwYPFZEgc8NyClz4mFV/rbQIDAQABAoIBAQCtoW3hra2XjCQb
-        VyMJfvQxJkkfw++VzOAp4PRAjMwmraGvIEFv1pbGqBcC5eZfNAgudfSuwqG4AkBl
-        Li8KpMrJtJfq1YkmkGjK03IWX4n9Ur1Tx3Y7iv6TjmFWZp6tHsxqWgPoL2J8kJ2a
-        a1dAR+70U/AEPMQAsBxFcJc41ArVxrhQ+Rt3ehKJqWSSuAUHTf1vNjg1Iqnj+7oP
-        0MhJPGy/qFC56qvTrhhnY1378F3wOM4Ii/QI6NbLpEpLZL1sPPOnpBA1UReMoLIA
-        Pq4u1ItER8FMHojwoUsm6n/FIQ1fJQhN4dvQZvgapKGCzpEu3Tq4G9P1Ls/cQwDQ
-        yOBt1seBAoGBAOTL843g9DZAutBk+P5RV9MD4zcuINuZCt46VfEAECIACuOAFxj6
-        19CuWG1UNAVvNGcf8qN7QFAqTZNpt6uBfIIfIaAgmdkQtSiLHf9hbHPgp6sv6Wxd
-        TljouQYNF4n+khucdU3mcbCNiKNDHaydRjcIO3wuKsyqPi3QYyKcp+MZAoGBAMtM
-        c7mmrs+RuC0ud2IqVJ2/7qo3j5FeSNzuMf9CEGRXvItfimD4wFGv5v5cAH7CVJpq
-        5ToS+aiJv6SC9gQr/f6Dye6B/FXBjvin3cMZVVb7ETBnGRpkHqRVOAmBhtkKRcJg
-        zFA2JHu6H+vvDk2LUgCkHUiq7Xe7whoHvmlbW0l1AoGAepf9zMv4jwloEDnKYRrc
-        4Ch5GxwQZxo+BI1ld1j9S/qR2wzLU4s1EJAauZogtbi8b3Vi4c4sy8efAZnn3HHp
-        cR+VOOO/C9wz9aF1VV2yavS5YrStcm8ch+9LFL73Ge3aBAl1oWQVDvEHgdN4lwE+
-        mkZC+WsTa87culeqhuVB4CECgYAXbgM0VTp2X6PrSRynKpu/5nvaEDcymLwrAiSu
-        920uM1Jeea9YB7MadvxXOkEwWrMnbMRoUgGF5AI7MoCp8GwAZi3imAZ916XjkG0l
-        bAkC0kKj4m3pNbq2U7/2kH/7CY0Knt9NK0A/Ji9BoLZ0R2c2/bMGSfS+RNxU5amT
-        ON0ndQKBgD6p5a7lyRburoDNPE0r3w6Oz3OX/WHourHMGdxIm3AlAknv71OL11OF
-        5AdCXTn8HMlsUD+su9gtpetN7/VwqENIp7LzSh4zGvUkV1rJH+JjrYybYRkJ58jG
-        z95fQNq2aEVgZHyGLLPGIB8zyQK3yyJzVOw7rHiborKTKxLVaQoC
-        -----END RSA PRIVATE KEY-----
-
+      tls_cert: (( file $ATC_CERT_FILE ))
+      tls_key: (( file $ATC_KEY_FILE ))
 
       postgresql_database: &atc_db atc
+
+      vault:
+        url: http://10.0.31.195:8200
+        auth:
+          client_token: (( file $ATC_VAULT_TOKEN_FILE ))
+
   - name: tsa
     release: concourse
     properties: {}
