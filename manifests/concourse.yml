@@ -46,7 +46,7 @@ instance_groups:
       vault:
         url: http://10.0.31.195:8200
         auth:
-          client_token: (( file $ATC_VAULT_TOKEN_FILE ))
+          client_token: (( grab $ATC_VAULT_TOKEN ))
 
   - name: tsa
     release: concourse

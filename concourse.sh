@@ -12,7 +12,7 @@ ssl_certificates () {
 
   export ATC_KEY_FILE="${KEYDIR}/atc-${SUBDOMAIN_TOKEN}.key"
   export ATC_CERT_FILE="${KEYDIR}/atc-${SUBDOMAIN_TOKEN}.crt"
-  export ATC_VAULT_TOKEN_FILE="${KEYDIR}/atc-${SUBDOMAIN_TOKEN}.token"
+  export ATC_VAULT_TOKEN=`cat keys/atc-gcp-crdant-io.token | grep "token " | awk '{ print $2; }'`
 
   echo "Creating SSL certificate for load balancers..."
 
