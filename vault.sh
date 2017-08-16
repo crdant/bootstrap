@@ -1,20 +1,18 @@
 #!/usr/bin/env bash
-STEMCELL_VERSION=3431.10
-VAULT_VERSION=3.3.4
+STEMCELL_VERSION=3431.12
+VAULT_VERSION=0.6.2
+VAULT_CHECKSUM=36fd3294f756372ff9fbbd6dfac11fe6030d02f9
 VAULT_STATIC_IP=10.0.31.195
 
 BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
 
 stemcell () {
-  stemcell_file=${WORKDIR}/light-bosh-stemcell-${STEMCELL_VERSION}-google-kvm-ubuntu-trusty-go_agent.tgz
-  wget -O $stemcell_file https://s3.amazonaws.com/bosh-gce-light-stemcells/light-bosh-stemcell-${STEMCELL_VERSION}-google-kvm-ubuntu-trusty-go_agent.tgz
-  bosh -e ${ENVIRONMENT_NAME} upload-stemcell $stemcell_file
+  bosh -e ${ENVIRONMENT_NAME} upload-stemcell https://bosh.io/d/stemcells/bosh-google-kvm-ubuntu-trusty-go_agent?v=${STEMCELL_VERSION} --sha1 ${STEMCELL_CHECKSUM}
 }
 
 releases () {
-  vault_release="https://bosh.io/d/github.com/cloudfoundry-community/vault-boshrelease"
-  bosh -e ${ENVIRONMENT_NAME} upload-release ${vault_release}
+  bosh -e ${ENVIRONMENT_NAME} upload release https://bosh.io/d/github.com/cloudfoundry-community/vault-boshrelease?v=${VAULT_VERSION} --sha1 ${VAULT_CHECKSUM}
 }
 
 prepare_manifest () {

@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
-STEMCELL_VERSION=3431.10
+STEMCELL_VERSION=3431.13
+STEMCELL_CHECKSUM=2a853946b58f6049b099d519f0c4bba90906c081
 CONCOURSE_VERSION=3.3.4
+CONCOURSE_CHECKSUM=e262b0fb209df6134ea15917e2b9b8bfb8d0d0d1
 GARDEN_RUNC_VERSION=1.6.0
+GARDEN_RUNC_CHECKSUM=58fbc64aff303e6d76899441241dd5dacef50cb7
+
 
 BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
@@ -44,19 +48,15 @@ ssl_certificates () {
 }
 
 stemcell () {
-  stemcell_file=${WORKDIR}/light-bosh-stemcell-${STEMCELL_VERSION}-google-kvm-ubuntu-trusty-go_agent.tgz
-  wget -O $stemcell_file https://s3.amazonaws.com/bosh-gce-light-stemcells/light-bosh-stemcell-${STEMCELL_VERSION}-google-kvm-ubuntu-trusty-go_agent.tgz
-  bosh -e ${ENVIRONMENT_NAME} upload-stemcell $stemcell_file
+  bosh -e ${ENVIRONMENT_NAME} upload-stemcell https://bosh.io/d/stemcells/bosh-google-kvm-ubuntu-trusty-go_agent?v=${STEMCELL_VERSION} --sha1 ${STEMCELL_CHECKSUM}
 }
 
 releases () {
   concourse_file=${WORKDIR}/concourse-${CONCOURSE_VERSION}.tgz
   garden_runc_file=${WORKDIR}/garden-runc-${GARDEN_RUNC_VERSION}.tgz
 
-  wget -O $concourse_file https://github.com/concourse/concourse/releases/download/v${CONCOURSE_VERSION}/concourse-${CONCOURSE_VERSION}.tgz
-  bosh -e ${ENVIRONMENT_NAME} upload-release $concourse_file
-  wget -O $garden_runc_file https://github.com/concourse/concourse/releases/download/v${CONCOURSE_VERSION}/garden-runc-${GARDEN_RUNC_VERSION}.tgz
-  bosh -e ${ENVIRONMENT_NAME} upload-release $garden_runc_file
+  bosh -e ${ENVIRONMENT_NAME} upload-release https://bosh.io/d/github.com/concourse/concourse?v=${CONCOURSE_VERSION} --sha1 ${CONCOURSE_CHECKSUM}
+  bosh -e ${ENVIRONMENT_NAME} upload-release https://bosh.io/d/github.com/cloudfoundry/garden-runc-release?v=${GARDEN_RUNC_VERSION} --sha1 ${GARDEN_RUNC_CHECKSUM}
 }
 
 prepare_manifest () {
