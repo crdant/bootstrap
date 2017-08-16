@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 STEMCELL_VERSION=3431.13
-STEMCELL_CHECKSUM=2a853946b58f6049b099d519f0c4bba90906c081
-CONCOURSE_VERSION=3.3.4
+STEMCELL_CHECKSUM=8ae6d01f01f627e70e50f18177927652a99a4585
+CONCOURSE_VERSION=3.4.0
 CONCOURSE_CHECKSUM=e262b0fb209df6134ea15917e2b9b8bfb8d0d0d1
 GARDEN_RUNC_VERSION=1.6.0
 GARDEN_RUNC_CHECKSUM=58fbc64aff303e6d76899441241dd5dacef50cb7
@@ -72,6 +72,38 @@ deploy () {
 init () {
   vault
 }
+
+
+if [ $# -gt 0 ]; then
+  while [ $# -gt 0 ]; do
+    case $1 in
+      certificates )
+        ssl_certificates
+        ;;
+      stemcell )
+        stemcell
+        ;;
+      release )
+        release
+        ;;
+      manifest )
+          prepare_manifest
+        ;;
+      deploy )
+        deploy
+        ;;
+      init )
+        init
+        ;;
+      * )
+        echo "Unrecognized option: $1" 1>&2
+        exit 1
+        ;;
+    esac
+    shift
+    exit
+  done
+fi
 
 ssl_certificates
 stemcell
