@@ -2,30 +2,30 @@
 BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
 
-export ACCOUNT
-export DOMAIN
-export PROJECT
+export account
+export domain
+export project
 
-export DOMAIN_TOKEN
-export SUBDOMAIN
-export SUBDOMAIN_TOKEN
+export domain_token
+export subdomain
+export subdomain_token
 
 export ENVIRONMENT_NAME
 
-export REGION
-export STORAGE_LOCATION
-export AVAILABILITY_ZONE
+export region
+export storage_location
+export availability_zone
 
-export DNS_ZONE
-export DNS_TTL
+export dns_zone
+export dns_ttl
 
-export SERVICE_ACCOUNT_NAME
-export SERVICE_ACCOUNT
+export service_account_name
+export service_account
 
-export KEYDIR
-export KEYFILE
-export WORKDIR
-export ETCDIR
-export MANIFEST_DIR
+export key_dir
+export key_file
+export workdir
+export etc_dir
+export manifest_dir
 
-export JUMPBOX
+export jumpbox

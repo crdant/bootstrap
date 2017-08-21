@@ -1,32 +1,32 @@
-ACCOUNT=cdantonio@pivotal.io
-DOMAIN=crdant.io
-PROJECT=fe-cdantonio
+account=cdantonio@pivotal.io
+domain=crdant.io
+project=fe-cdantonio
 
-DOMAIN_TOKEN=`echo ${DOMAIN} | tr . -`
-SUBDOMAIN="gcp.${DOMAIN}"
-SUBDOMAIN_TOKEN=`echo ${SUBDOMAIN} | tr . -`
+domain_token=`echo ${domain} | tr . -`
+subdomain="gcp.${domain}"
+subdomain_token=`echo ${subdomain} | tr . -`
 
-REGION="us-east1"
-STORAGE_LOCATION="us"
-AVAILABILITY_ZONE="${REGION}-d"
+region="us-east1"
+storage_location="us"
+availability_zone="${region}-d"
 
-DNS_ZONE="${SUBDOMAIN}"
-DNS_TTL=60
+dns_zone="${subdomain}"
+dns_ttl=60
 
-SERVICE_ACCOUNT_NAME="${ENVIRONMENT_NAME}"
-SERVICE_ACCOUNT="${SERVICE_ACCOUNT_NAME}@${PROJECT}.iam.gserviceaccount.com"
+service_account_name="${ENVIRONMENT_NAME}"
+service_account="${service_account_name}@${project}.iam.gserviceaccount.com"
 
-KEYDIR="${BASEDIR}/keys"
-KEYFILE="${KEYDIR}/${PROJECT}-${SERVICE_ACCOUNT_NAME}.json"
-WORKDIR="${BASEDIR}/work"
-ETCDIR="${BASEDIR}/etc"
-MANIFEST_DIR="${BASEDIR}/manifests"
+key_dir="${BASEDIR}/keys"
+key_file="${key_dir}/${project}-${service_account_name}.json"
+workdir="${BASEDIR}/work"
+etc_dir="${BASEDIR}/etc"
+manifest_dir="${BASEDIR}/manifests"
 
 if [ -f "${BASEDIR}/bbl-state.json" ] ; then
   jumpbox=`bbl jumpbox-address | cut -d':' -f1 `
   env_id=`bbl env-id`
 fi
 
-if [ -f "${WORKDIR}/bbl-env.sh" ] ; then
-  . ${WORKDIR}/bbl-env.sh
+if [ -f "${workdir}/bbl-env.sh" ] ; then
+  . ${workdir}/bbl-env.sh
 fi

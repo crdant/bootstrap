@@ -10,16 +10,16 @@ director() {
 
 service_accounts () {
   echo "Deleting service accounts..."
-  KEYID=`jq --raw-output '.private_key_id' "${KEYFILE}" `
-  gcloud projects remove-iam-policy-binding "${PROJECT}" --member "serviceAccount:${SERVICE_ACCOUNT}" --role "roles/editor" --no-user-output-enabled
-  gcloud iam service-accounts --project "${PROJECT}" keys delete "${KEYID}" --iam-account "${SERVICE_ACCOUNT}" --no-user-output-enabled
-  gcloud iam service-accounts --project "${PROJECT}" delete "${SERVICE_ACCOUNT}" --no-user-output-enabled
+  KEYID=`jq --raw-output '.private_key_id' "${key_file}" `
+  gcloud projects remove-iam-policy-binding "${project}" --member "serviceAccount:${service_account}" --role "roles/editor" --no-user-output-enabled
+  gcloud iam service-accounts --project "${project}" keys delete "${KEYID}" --iam-account "${service_account}" --no-user-output-enabled
+  gcloud iam service-accounts --project "${project}" delete "${service_account}" --no-user-output-enabled
 }
 
 cleanup() {
-  chmod 600 ${KEYDIR}/id_jumpbox_${SUBDOMAIN_TOKEN}.pem
-  rm -rf ${KEYDIR}/*
-  rm -rf ${WORKDIR}/*
+  chmod 600 ${key_dir}/id_jumpbox_${subdomain_token}.pem
+  rm -rf ${key_dir}/*
+  rm -rf ${workdir}/*
   rm bbl-state.json
 }
 

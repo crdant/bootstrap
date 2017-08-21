@@ -9,37 +9,37 @@ GARDEN_RUNC_CHECKSUM=58fbc64aff303e6d76899441241dd5dacef50cb7
 BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
 
-export ATC_KEY_FILE="${KEYDIR}/atc-${SUBDOMAIN_TOKEN}.key"
-export ATC_CERT_FILE="${KEYDIR}/atc-${SUBDOMAIN_TOKEN}.crt"
+export ATC_KEY_FILE="${key_dir}/atc-${subdomain_token}.key"
+export ATC_CERT_FILE="${key_dir}/atc-${subdomain_token}.crt"
 
 ssl_certificates () {
-  LB_KEY_FILE="${KEYDIR}/web-${SUBDOMAIN_TOKEN}.key"
-  LB_CERT_FILE="${KEYDIR}/web-${SUBDOMAIN_TOKEN}.crt"
+  LB_KEY_FILE="${key_dir}/web-${subdomain_token}.key"
+  LB_CERT_FILE="${key_dir}/web-${subdomain_token}.crt"
 
   echo "Creating SSL certificate for load balancers..."
 
-  COMMON_NAME="*.${SUBDOMAIN}"
+  COMMON_NAME="*.${subdomain}"
   COUNTRY="US"
   STATE="MA"
   CITY="Cambridge"
-  ORGANIZATION="${DOMAIN}"
+  ORGANIZATION="${domain}"
   ORG_UNIT="Continuous Delivery"
-  EMAIL="${ACCOUNT}"
+  EMAIL="${account}"
   SUBJECT="/C=${COUNTRY}/ST=${STATE}/L=${CITY}/O=${ORGANIZATION}/OU=${ORG_UNIT}/CN=${COMMON_NAME}/emailAddress=${EMAIL}"
 
   openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${LB_KEY_FILE}" -out "${LB_CERT_FILE}" -subj "${SUBJECT}" > /dev/null
 
-  echo "SSL certificate for load balanacers created and stored at ${KEYDIR}/${SUBDOMAIN_TOKEN}.crt, private key stored at ${KEYDIR}/${SUBDOMAIN_TOKEN}.key."
+  echo "SSL certificate for load balanacers created and stored at ${key_dir}/${subdomain_token}.crt, private key stored at ${key_dir}/${subdomain_token}.key."
 
   echo "Creating SSL certificate for ATC..."
 
-  COMMON_NAME="*.${SUBDOMAIN}"
+  COMMON_NAME="*.${subdomain}"
   COUNTRY="US"
   STATE="MA"
   CITY="Cambridge"
-  ORGANIZATION="${DOMAIN}"
+  ORGANIZATION="${domain}"
   ORG_UNIT="Continuous Delivery"
-  EMAIL="${ACCOUNT}"
+  EMAIL="${account}"
   SUBJECT="/C=${COUNTRY}/ST=${STATE}/L=${CITY}/O=${ORGANIZATION}/OU=${ORG_UNIT}/CN=${COMMON_NAME}/emailAddress=${EMAIL}"
 
   openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${ATC_KEY_FILE}" -out "${ATC_CERT_FILE}" -subj "${SUBJECT}" > /dev/null
@@ -50,23 +50,23 @@ stemcell () {
 }
 
 releases () {
-  concourse_file=${WORKDIR}/concourse-${CONCOURSE_VERSION}.tgz
-  garden_runc_file=${WORKDIR}/garden-runc-${GARDEN_RUNC_VERSION}.tgz
+  concourse_file=${workdir}/concourse-${CONCOURSE_VERSION}.tgz
+  garden_runc_file=${workdir}/garden-runc-${GARDEN_RUNC_VERSION}.tgz
 
   bosh -e "${env_id}" upload-release https://bosh.io/d/github.com/concourse/concourse?v=${CONCOURSE_VERSION} --sha1 ${CONCOURSE_CHECKSUM}
   bosh -e "${env_id}" upload-release https://bosh.io/d/github.com/cloudfoundry/garden-runc-release?v=${GARDEN_RUNC_VERSION} --sha1 ${GARDEN_RUNC_CHECKSUM}
 }
 
 prepare_manifest () {
-  local manifest=${WORKDIR}/concourse.yml
+  local manifest=${workdir}/concourse.yml
   export ATC_VAULT_TOKEN=`cat keys/atc-gcp-crdant-io.token | grep "token " | awk '{ print $2; }'`
-  export VAULT_CERT_FILE=${KEYDIR}/vault-${env_id}.crt
+  export VAULT_CERT_FILE=${key_dir}/vault-${env_id}.crt
 
-  spruce merge --prune tls ${MANIFEST_DIR}/concourse.yml > $manifest
+  spruce merge --prune tls ${manifest_dir}/concourse.yml > $manifest
 }
 
 deploy () {
-  local manifest=${WORKDIR}/concourse.yml
+  local manifest=${workdir}/concourse.yml
   bbl create-lbs --type concourse
   bosh -n -e "${env_id}" -d concourse deploy "${manifest}"
 }
