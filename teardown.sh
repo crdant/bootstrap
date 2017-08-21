@@ -17,7 +17,7 @@ service_accounts () {
 }
 
 cleanup() {
-  chmod 400 ${KEYDIR}/id_jumpbox_${SUBDOMAIN_TOKEN}.pem
+  chmod 600 ${KEYDIR}/id_jumpbox_${SUBDOMAIN_TOKEN}.pem
   rm -rf ${KEYDIR}/*
   rm -rf ${WORKDIR}/*
   rm bbl-state.json
@@ -33,7 +33,7 @@ if [ $# -gt 0 ]; then
         service_accounts
         ;;
       cleanup )
-          login
+          cleanup
         ;;
       * )
         echo "Unrecognized option: $1" 1>&2
@@ -47,4 +47,4 @@ fi
 
 director
 service_accounts
-cleanups
+cleanup
