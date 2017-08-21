@@ -21,6 +21,17 @@ instance_groups:
   jobs:
   - name: vault
     release: vault
+    properties:
+      vault:
+        storage:
+          use_file: true
+          file:
+            path: /var/vcap/store/vault/data
+        listener:
+          tcp:
+            tls:
+              certificate: (( file $VAULT_CERT_FILE ))
+              key: (( file $VAULT_KEY_FILE ))
 
 stemcells:
 - alias: trusty
