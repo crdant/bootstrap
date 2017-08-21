@@ -6,8 +6,6 @@ DOMAIN_TOKEN=`echo ${DOMAIN} | tr . -`
 SUBDOMAIN="gcp.${DOMAIN}"
 SUBDOMAIN_TOKEN=`echo ${SUBDOMAIN} | tr . -`
 
-ENVIRONMENT_NAME="bbl-${SUBDOMAIN_TOKEN}-jump"
-
 REGION="us-east1"
 STORAGE_LOCATION="us"
 AVAILABILITY_ZONE="${REGION}-d"
@@ -25,5 +23,10 @@ ETCDIR="${BASEDIR}/etc"
 MANIFEST_DIR="${BASEDIR}/manifests"
 
 if [ -f "${BASEDIR}/bbl-state.json" ] ; then
-  JUMPBOX=`bbl jumpbox-address | cut -d':' -f1 `
+  jumpbox=`bbl jumpbox-address | cut -d':' -f1 `
+  env_id=`bbl env-id`
+fi
+
+if [ -f "${WORKDIR}/bbl-env.sh" ] ; then
+  . ${WORKDIR}/bbl-env.sh
 fi
