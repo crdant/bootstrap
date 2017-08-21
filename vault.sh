@@ -4,45 +4,45 @@ BASEDIR=`dirname $0`
 . ${workdir}/bbl-env.sh
 
 env_id=`bbl env-id`
-STEMCELL_VERSION=3431.13
-STEMCELL_CHECKSUM=8ae6d01f01f627e70e50f18177927652a99a4585
+stemcell_version=3431.13
+stemcell_checksum=8ae6d01f01f627e70e50f18177927652a99a4585
 
-VAULT_VERSION=0.6.2
-VAULT_CHECKSUM=36fd3294f756372ff9fbbd6dfac11fe6030d02f9
-VAULT_STATIC_IP=10.0.31.195
-VAULT_PORT=8200
-VAULT_ADDR=https://localhost:${VAULT_PORT}
+vault_version=0.6.2
+vault_checksum=36fd3294f756372ff9fbbd6dfac11fe6030d02f9
+vault_static_ip=10.0.31.195
+vault_port=8200
+vault_addr=https://localhost:${vault_port}
 
-export VAULT_CERT_FILE=${key_dir}/vault-${env_id}.crt
-export VAULT_KEY_FILE=${key_dir}/vault-${env_id}.key
+export vault_cert_file=${key_dir}/vault-${env_id}.crt
+export vault_key_file=${key_dir}/vault-${env_id}.key
 
 ssl_certificates () {
   echo "Creating SSL certificate..."
 
-  COMMON_NAME="vault.${subdomain}"
-  COUNTRY="US"
-  STATE="MA"
-  CITY="Cambridge"
-  ORGANIZATION="${domain}"
-  ORG_UNIT="Vault"
-  EMAIL="${account}"
-  ALT_NAMES="IP:${VAULT_STATIC_IP},DNS:localhost,IP:127.0.0.1"
-  SUBJECT="/C=${COUNTRY}/ST=${STATE}/L=${CITY}/O=${ORGANIZATION}/OU=${ORG_UNIT}/CN=${COMMON_NAME}/emailAddress=${EMAIL}"
+  common_name="vault.${subdomain}"
+  country="US"
+  state="MA"
+  city="Cambridge"
+  organization="${domain}"
+  org_unit="Vault"
+  email="${account}"
+  alt_names="IP:${vault_static_ip},DNS:localhost,IP:127.0.0.1"
+  subject="/C=${country}/ST=${state}/L=${city}/O=${organization}/OU=${org_unit}/CN=${common_name}/emailAddress=${email}"
 
-  openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${VAULT_KEY_FILE}" -out "${VAULT_CERT_FILE}" -subj "${SUBJECT}" -reqexts SAN -extensions SAN -config <(cat /etc/ssl/openssl.cnf <(printf "\n[SAN]\nsubjectAltName=${ALT_NAMES}\n"))  > /dev/null
+  openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${vault_key_file}" -out "${vault_cert_file}" -subj "${subject}" -reqexts SAN -extensions SAN -config <(cat /etc/ssl/openssl.cnf <(printf "\n[SAN]\nsubjectAltName=${alt_names}\n"))  > /dev/null
 }
 
 stemcell () {
-  bosh -n -e ${env_id} upload-stemcell https://bosh.io/d/stemcells/bosh-google-kvm-ubuntu-trusty-go_agent?v=${STEMCELL_VERSION} --sha1 ${STEMCELL_CHECKSUM}
+  bosh -n -e ${env_id} upload-stemcell https://bosh.io/d/stemcells/bosh-google-kvm-ubuntu-trusty-go_agent?v=${stemcell_version} --sha1 ${stemcell_checksum}
 }
 
 releases () {
-  bosh -n -e ${env_id} upload-release https://bosh.io/d/github.com/cloudfoundry-community/vault-boshrelease?v=${VAULT_VERSION} --sha1 ${VAULT_CHECKSUM}
+  bosh -n -e ${env_id} upload-release https://bosh.io/d/github.com/cloudfoundry-community/vault-boshrelease?v=${vault_version} --sha1 ${vault_checksum}
 }
 
 prepare_manifest () {
   local manifest=${workdir}/vault.yml
-  VAULT_STATIC_IP=${VAULT_STATIC_IP} spruce merge ${manifest_dir}/vault.yml > ${manifest}
+  vault_static_ip=${vault_static_ip} spruce merge ${manifest_dir}/vault.yml > ${manifest}
 }
 
 deploy () {
@@ -51,24 +51,24 @@ deploy () {
 }
 
 firewall() {
-  gcloud --project "${project}" compute firewall-rules create "${env_id}-vault" --allow="tcp:${VAULT_PORT}" --source-tags="${env_id}-bosh-open" --target-tags="${env_id}-internal" --network="${env_id}-network "
+  gcloud --project "${project}" compute firewall-rules create "${env_id}-vault" --allow="tcp:${vault_port}" --source-tags="${env_id}-bosh-open" --target-tags="${env_id}-internal" --network="${env_id}-network "
 }
 
 tunnel () {
-  ssh -fnNT -L 8200:${VAULT_STATIC_IP}:8200 jumpbox@${jumpbox} -i $BOSH_GW_PRIVATE_KEY
+  ssh -fnNT -L 8200:${vault_static_ip}:8200 jumpbox@${jumpbox} -i $BOSH_GW_PRIVATE_KEY
 }
 
 unseal() {
   # unseal the vault
-  vault unseal --address ${VAULT_ADDR} --ca-cert=${VAULT_CERT_FILE} `jq -r '.keys_base64[0]' ${key_dir}/vault_secrets.json`
-  vault unseal --address ${VAULT_ADDR} --ca-cert=${VAULT_CERT_FILE} `jq -r '.keys_base64[1]' ${key_dir}/vault_secrets.json`
-  vault unseal --address ${VAULT_ADDR} --ca-cert=${VAULT_CERT_FILE} `jq -r '.keys_base64[2]' ${key_dir}/vault_secrets.json`
+  vault unseal --address ${vault_addr} --ca-cert=${vault_cert_file} `jq -r '.keys_base64[0]' ${key_dir}/vault_secrets.json`
+  vault unseal --address ${vault_addr} --ca-cert=${vault_cert_file} `jq -r '.keys_base64[1]' ${key_dir}/vault_secrets.json`
+  vault unseal --address ${vault_addr} --ca-cert=${vault_cert_file} `jq -r '.keys_base64[2]' ${key_dir}/vault_secrets.json`
 }
 
 init () {
   # initialize the vault using the API directly to parse the JSON
   initialization=`cat ${etc_dir}/vault_init.json`
-  curl -qs --cacert ${VAULT_CERT_FILE} -X PUT "${VAULT_ADDR}/v1/sys/init" -H "Accept: application/json" -H "Content-Type: application/json" -d "${initialization}" | jq '.' >${key_dir}/vault_secrets.json
+  curl -qs --cacert ${vault_cert_file} -X PUT "${vault_addr}/v1/sys/init" -H "Accept: application/json" -H "Content-Type: application/json" -d "${initialization}" | jq '.' >${key_dir}/vault_secrets.json
   unseal
 }
 

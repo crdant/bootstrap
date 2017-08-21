@@ -1,66 +1,63 @@
 #!/usr/bin/env bash
-STEMCELL_VERSION=3431.13
-STEMCELL_CHECKSUM=8ae6d01f01f627e70e50f18177927652a99a4585
-CONCOURSE_VERSION=3.4.0
-CONCOURSE_CHECKSUM=e262b0fb209df6134ea15917e2b9b8bfb8d0d0d1
-GARDEN_RUNC_VERSION=1.6.0
-GARDEN_RUNC_CHECKSUM=58fbc64aff303e6d76899441241dd5dacef50cb7
+stemcell_version=3431.13
+stemcell_checksum=8ae6d01f01f627e70e50f18177927652a99a4585
+concourse_version=3.4.0
+concourse_checksum=e262b0fb209df6134ea15917e2b9b8bfb8d0d0d1
+garden_version=1.6.0
+garden_checksum=58fbc64aff303e6d76899441241dd5dacef50cb7
 
 BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
 
-export ATC_KEY_FILE="${key_dir}/atc-${subdomain_token}.key"
-export ATC_CERT_FILE="${key_dir}/atc-${subdomain_token}.crt"
+export atc_key_file="${key_dir}/atc-${subdomain_token}.key"
+export atc_cert_file="${key_dir}/atc-${subdomain_token}.crt"
 
 ssl_certificates () {
-  LB_KEY_FILE="${key_dir}/web-${subdomain_token}.key"
-  LB_CERT_FILE="${key_dir}/web-${subdomain_token}.crt"
+  lb_key_file="${key_dir}/web-${subdomain_token}.key"
+  lb_cert_file="${key_dir}/web-${subdomain_token}.crt"
 
   echo "Creating SSL certificate for load balancers..."
 
-  COMMON_NAME="*.${subdomain}"
-  COUNTRY="US"
-  STATE="MA"
-  CITY="Cambridge"
-  ORGANIZATION="${domain}"
-  ORG_UNIT="Continuous Delivery"
-  EMAIL="${account}"
-  SUBJECT="/C=${COUNTRY}/ST=${STATE}/L=${CITY}/O=${ORGANIZATION}/OU=${ORG_UNIT}/CN=${COMMON_NAME}/emailAddress=${EMAIL}"
+  common_name="*.${subdomain}"
+  country="US"
+  state="MA"
+  city="Cambridge"
+  organization="${domain}"
+  org_unit="Continuous Delivery"
+  email="${account}"
+  subject="/C=${country}/ST=${state}/L=${city}/O=${organization}/OU=${org_unit}/CN=${common_name}/emailAddress=${email}"
 
-  openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${LB_KEY_FILE}" -out "${LB_CERT_FILE}" -subj "${SUBJECT}" > /dev/null
+  openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${lb_key_file}" -out "${lb_cert_file}" -subj "${subject}" > /dev/null
 
   echo "SSL certificate for load balanacers created and stored at ${key_dir}/${subdomain_token}.crt, private key stored at ${key_dir}/${subdomain_token}.key."
 
   echo "Creating SSL certificate for ATC..."
 
-  COMMON_NAME="*.${subdomain}"
-  COUNTRY="US"
-  STATE="MA"
-  CITY="Cambridge"
-  ORGANIZATION="${domain}"
-  ORG_UNIT="Continuous Delivery"
-  EMAIL="${account}"
-  SUBJECT="/C=${COUNTRY}/ST=${STATE}/L=${CITY}/O=${ORGANIZATION}/OU=${ORG_UNIT}/CN=${COMMON_NAME}/emailAddress=${EMAIL}"
+  common_name="*.${subdomain}"
+  country="US"
+  state="MA"
+  city="Cambridge"
+  organization="${domain}"
+  org_unit="Continuous Delivery"
+  email="${account}"
+  subject="/C=${country}/ST=${state}/L=${city}/O=${organization}/OU=${org_unit}/CN=${common_name}/emailAddress=${email}"
 
-  openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${ATC_KEY_FILE}" -out "${ATC_CERT_FILE}" -subj "${SUBJECT}" > /dev/null
+  openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${atc_key_file}" -out "${atc_cert_file}" -subj "${subject}" > /dev/null
 }
 
 stemcell () {
-  bosh -e "${env_id}" upload-stemcell https://bosh.io/d/stemcells/bosh-google-kvm-ubuntu-trusty-go_agent?v=${STEMCELL_VERSION} --sha1 ${STEMCELL_CHECKSUM}
+  bosh -e "${env_id}" upload-stemcell https://bosh.io/d/stemcells/bosh-google-kvm-ubuntu-trusty-go_agent?v=${stemcell_version} --sha1 ${stemcell_checksum}
 }
 
 releases () {
-  concourse_file=${workdir}/concourse-${CONCOURSE_VERSION}.tgz
-  garden_runc_file=${workdir}/garden-runc-${GARDEN_RUNC_VERSION}.tgz
-
-  bosh -e "${env_id}" upload-release https://bosh.io/d/github.com/concourse/concourse?v=${CONCOURSE_VERSION} --sha1 ${CONCOURSE_CHECKSUM}
-  bosh -e "${env_id}" upload-release https://bosh.io/d/github.com/cloudfoundry/garden-runc-release?v=${GARDEN_RUNC_VERSION} --sha1 ${GARDEN_RUNC_CHECKSUM}
+  bosh -e "${env_id}" upload-release https://bosh.io/d/github.com/concourse/concourse?v=${concourse_version} --sha1 ${concourse_checksum}
+  bosh -e "${env_id}" upload-release https://bosh.io/d/github.com/cloudfoundry/garden-runc-release?v=${garden_version} --sha1 ${garden_checksum}
 }
 
 prepare_manifest () {
   local manifest=${workdir}/concourse.yml
-  export ATC_VAULT_TOKEN=`cat keys/atc-gcp-crdant-io.token | grep "token " | awk '{ print $2; }'`
-  export VAULT_CERT_FILE=${key_dir}/vault-${env_id}.crt
+  export atc_vault_token=`cat keys/atc-gcp-crdant-io.token | grep "token " | awk '{ print $2; }'`
+  export vault_cert_file=${key_dir}/vault-${env_id}.crt
 
   spruce merge --prune tls ${manifest_dir}/concourse.yml > $manifest
 }

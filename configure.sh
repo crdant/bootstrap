@@ -5,24 +5,24 @@ BASEDIR=`dirname $0`
 
 env_id=`bbl env-id`
 
-VAULT_PORT=8200
-VAULT_ADDR=https://localhost:${VAULT_PORT}
-VAULT_CERT_FILE=${key_dir}/vault-${env_id}.crt
+vault_port=8200
+vault_addr=https://localhost:${vault_port}
+vault_cert_file=${key_dir}/vault-${env_id}.crt
 
 set -e
 
 auth () {
-  vault auth  --address ${VAULT_ADDR} --ca-cert=${VAULT_CERT_FILE} `jq -r .root_token ${key_dir}/vault_secrets.json`
+  vault auth  --address ${vault_addr} --ca-cert=${vault_cert_file} `jq -r .root_token ${key_dir}/vault_secrets.json`
 }
 
 policies () {
-  vault policy-write --address ${VAULT_ADDR} --ca-cert=${VAULT_CERT_FILE} conrad ${etc_dir}/conrad.hcl
-  vault policy-write --address ${VAULT_ADDR} --ca-cert=${VAULT_CERT_FILE} concourse ${etc_dir}/concourse.hcl
+  vault policy-write --address ${vault_addr} --ca-cert=${vault_cert_file} conrad ${etc_dir}/conrad.hcl
+  vault policy-write --address ${vault_addr} --ca-cert=${vault_cert_file} concourse ${etc_dir}/concourse.hcl
 }
 
 tokens () {
-  vault token-create --address ${VAULT_ADDR} --ca-cert=${VAULT_CERT_FILE} --policy conrad > "${key_dir}/conrad-${subdomain_token}.token"
-  vault token-create --address ${VAULT_ADDR} --ca-cert=${VAULT_CERT_FILE} --policy concourse > "${key_dir}/atc-${subdomain_token}.token"
+  vault token-create --address ${vault_addr} --ca-cert=${vault_cert_file} --policy conrad > "${key_dir}/conrad-${subdomain_token}.token"
+  vault token-create --address ${vault_addr} --ca-cert=${vault_cert_file} --policy concourse > "${key_dir}/atc-${subdomain_token}.token"
 }
 
 

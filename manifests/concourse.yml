@@ -38,8 +38,8 @@ instance_groups:
       basic_auth_password: crooked-blossom-haply-afflict
 
       # replace with your SSL cert and key
-      tls_cert: (( file $ATC_CERT_FILE ))
-      tls_key: (( file $ATC_KEY_FILE ))
+      tls_cert: (( file $atc_cert_file ))
+      tls_key: (( file $atc_key_file ))
 
       postgresql_database: &atc_db atc
 
@@ -47,9 +47,9 @@ instance_groups:
         url: https://10.0.31.195:8200
         auth:
           backend: token
-          client_token: (( grab $ATC_VAULT_TOKEN ))
+          client_token: (( grab $atc_vault_token ))
         tls:
-          ca_cert: (( file $VAULT_CERT_FILE ))
+          ca_cert: (( file $vault_cert_file ))
 
 
   - name: tsa
