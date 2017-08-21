@@ -44,9 +44,13 @@ instance_groups:
       postgresql_database: &atc_db atc
 
       vault:
-        url: http://10.0.31.195:8200
+        url: https://10.0.31.195:8200
         auth:
+          backend: token
           client_token: (( grab $ATC_VAULT_TOKEN ))
+        tls:
+          ca_cert: (( file $VAULT_CERT_FILE ))
+
 
   - name: tsa
     release: concourse
