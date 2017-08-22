@@ -4,13 +4,19 @@ project=fe-cdantonio
 
 domain_token=`echo ${domain} | tr . -`
 subdomain="bbl.gcp.${domain}"
-env_id=`echo ${subdomain} | tr . -`
 
 region="us-east1"
 storage_location="us"
 availability_zone="${region}-d"
 
-dns_zone="${subdomain}-dns"
+if [ -f "${BASEDIR}/bbl-state.json" ] ; then
+  jumpbox=`bbl jumpbox-address | cut -d':' -f1 `
+  env_id=`bbl env-id`
+else
+  env_id=`echo ${subdomain} | tr . -`
+fi
+
+dns_zone="${env_id}-dns"
 dns_ttl=60
 
 service_account_name="${ENVIRONMENT_NAME}"
@@ -21,11 +27,6 @@ key_file="${key_dir}/${project}-${service_account_name}.json"
 workdir="${BASEDIR}/work"
 etc_dir="${BASEDIR}/etc"
 manifest_dir="${BASEDIR}/manifests"
-
-if [ -f "${BASEDIR}/bbl-state.json" ] ; then
-  jumpbox=`bbl jumpbox-address | cut -d':' -f1 `
-  env_id=`bbl env-id`
-fi
 
 if [ -f "${workdir}/bbl-env.sh" ] ; then
   . ${workdir}/bbl-env.sh
