@@ -33,7 +33,7 @@ if [ $# -gt 0 ]; then
         service_accounts
         ;;
       cleanup )
-          cleanup
+        cleanup
         ;;
       * )
         echo "Unrecognized option: $1" 1>&2
