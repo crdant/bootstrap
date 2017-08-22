@@ -17,7 +17,7 @@ service_accounts () {
 }
 
 cleanup() {
-  chmod 600 ${key_dir}/id_jumpbox_${subdomain_token}.pem
+  chmod 600 ${key_dir}/id_jumpbox_${env_id}.pem
   rm -rf ${key_dir}/*
   rm -rf ${workdir}/*
   rm bbl-state.json
