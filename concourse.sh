@@ -9,12 +9,12 @@ garden_checksum=58fbc64aff303e6d76899441241dd5dacef50cb7
 BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
 
-export atc_key_file="${key_dir}/atc-${subdomain_token}.key"
-export atc_cert_file="${key_dir}/atc-${subdomain_token}.crt"
+export atc_key_file="${key_dir}/atc-${env_id}.key"
+export atc_cert_file="${key_dir}/atc-${env_id}.crt"
 
 ssl_certificates () {
-  lb_key_file="${key_dir}/web-${subdomain_token}.key"
-  lb_cert_file="${key_dir}/web-${subdomain_token}.crt"
+  lb_key_file="${key_dir}/web-${env_id}.key"
+  lb_cert_file="${key_dir}/web-${env_id}.crt"
 
   echo "Creating SSL certificate for load balancers..."
 
@@ -29,7 +29,7 @@ ssl_certificates () {
 
   openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${lb_key_file}" -out "${lb_cert_file}" -subj "${subject}" > /dev/null
 
-  echo "SSL certificate for load balanacers created and stored at ${key_dir}/${subdomain_token}.crt, private key stored at ${key_dir}/${subdomain_token}.key."
+  echo "SSL certificate for load balanacers created and stored at ${key_dir}/${env_id}.crt, private key stored at ${key_dir}/${env_id}.key."
 
   echo "Creating SSL certificate for ATC..."
 
@@ -56,7 +56,7 @@ releases () {
 
 prepare_manifest () {
   local manifest=${workdir}/concourse.yml
-  export atc_vault_token=`cat keys/atc-gcp-crdant-io.token | grep "token " | awk '{ print $2; }'`
+  export atc_vault_token=`cat keys/atc-${env_id}.token | grep "token " | awk '{ print $2; }'`
   export vault_cert_file=${key_dir}/vault-${env_id}.crt
 
   spruce merge --prune tls ${manifest_dir}/concourse.yml > $manifest
@@ -64,12 +64,32 @@ prepare_manifest () {
 
 deploy () {
   local manifest=${workdir}/concourse.yml
-  bbl create-lbs --type concourse
+  bbl create-lbs --type concourse --key ${lb_key_file} --cert ${lb_cert_file}
   bosh -n -e "${env_id}" -d concourse deploy "${manifest}"
+}
+
+dns() {
+  echo "Setting up DNS..."
+
+  local transaction_file="${workdir}/dns-transaction-${dns_zone}.xml"
+  gcloud dns managed-zones --project ${project} create ${dns_zone} --dns-name "${subdomain}." --description "Zone for ${subdomain}" --no-user-output-enabled
+
+  # TO DO: put this in here like in https://github.com/crdant/pcf-on-gcp
+  # update_root_dns
+  # echo "Waiting for ${DNS_TTL} seconds for the Root DNS to sync up..."
+  # sleep "${DNS_TTL}"
+
+  gcloud dns record-sets --project "${project}" transaction start -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
+
+  # set up the load balancer in DNS
+  lb_address=`gcloud compute --project ${project} forwarding-rules describe ${env_id}-concourse-https --region ${region} --format json | jq --raw-output '.IPAddress'`
+  gcloud dns record-sets --project ${project} transaction add -z "${dns_zone}" --name "concourse.${subdomain}" --ttl "${dns_ttl}" --type A "${lb_address}" --transaction-file="${transaction_file}" --no-user-output-enabled
+  gcloud dns record-sets --project ${project} transaction execute -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
 }
 
 teardown () {
   bosh -n -e "${env_id}" -d concourse delete-deployment
+  bbl delete-lbs
 }
 
 if [ $# -gt 0 ]; then
@@ -88,10 +108,14 @@ if [ $# -gt 0 ]; then
         release
         ;;
       manifest )
-          prepare_manifest
+        prepare_manifest
         ;;
       deploy )
         deploy
+        dns
+        ;;
+      dns )
+        dns
         ;;
       init )
         ;;
@@ -104,8 +128,8 @@ if [ $# -gt 0 ]; then
         ;;
     esac
     shift
-    exit
   done
+  exit
 fi
 
 ssl_certificates
@@ -113,4 +137,3 @@ stemcell
 releases
 prepare_manifest
 deploy
-init
