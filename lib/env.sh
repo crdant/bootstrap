@@ -3,14 +3,14 @@ domain=crdant.io
 project=fe-cdantonio
 
 domain_token=`echo ${domain} | tr . -`
-subdomain="gcp.${domain}"
-subdomain_token=`echo ${subdomain} | tr . -`
+subdomain="bbl.gcp.${domain}"
+env_id=`echo ${subdomain} | tr . -`
 
 region="us-east1"
 storage_location="us"
 availability_zone="${region}-d"
 
-dns_zone="${subdomain}"
+dns_zone="${subdomain}-dns"
 dns_ttl=60
 
 service_account_name="${ENVIRONMENT_NAME}"

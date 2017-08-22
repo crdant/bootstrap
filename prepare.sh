@@ -30,9 +30,9 @@ client() {
   chmod 755 ${workdir}/bbl-env.sh
   eval "$bbl_env"
   # store the ssh key for easy use
-  chmod 600 ${key_dir}/id_jumpbox_${subdomain_token}.pem
-  bbl ssh-key > ${key_dir}/id_jumpbox_${subdomain_token}.pem
-  chmod 400 ${key_dir}/id_jumpbox_${subdomain_token}.pem
+  chmod 600 ${key_dir}/id_jumpbox_${env_id}.pem
+  bbl ssh-key > ${key_dir}/id_jumpbox_${env_id}.pem
+  chmod 400 ${key_dir}/id_jumpbox_${env_id}.pem
 
   bosh_ca_cert=`bbl director-ca-cert`
   bosh_director_address=`bbl director-address`

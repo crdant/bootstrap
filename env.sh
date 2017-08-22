@@ -8,7 +8,7 @@ export project
 
 export domain_token
 export subdomain
-export subdomain_token
+export env_id
 
 export ENVIRONMENT_NAME
 

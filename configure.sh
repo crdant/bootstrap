@@ -21,8 +21,8 @@ policies () {
 }
 
 tokens () {
-  vault token-create --address ${vault_addr} --ca-cert=${vault_cert_file} --policy conrad > "${key_dir}/conrad-${subdomain_token}.token"
-  vault token-create --address ${vault_addr} --ca-cert=${vault_cert_file} --policy concourse > "${key_dir}/atc-${subdomain_token}.token"
+  vault token-create --address ${vault_addr} --ca-cert=${vault_cert_file} --policy conrad > "${key_dir}/conrad-${env_id}.token"
+  vault token-create --address ${vault_addr} --ca-cert=${vault_cert_file} --policy concourse > "${key_dir}/atc-${env_id}.token"
 }
 
 
