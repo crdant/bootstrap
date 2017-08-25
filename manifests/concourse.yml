@@ -31,11 +31,11 @@ instance_groups:
       bind_port: 80
       tls_bind_port: 443
       # replace with your CI's externally reachable URL, e.g. https://ci.foo.com
-      external_url: https://concourse.gcp.crdant.io
+      external_url:  (( grab $concourse_url ))
 
       # replace with username/password, or configure GitHub auth
-      basic_auth_username: main
-      basic_auth_password: crooked-blossom-haply-afflict
+      basic_auth_username: (( grab $concourse_user ))
+      basic_auth_password: (( grab $concourse_password ))
 
       # replace with your SSL cert and key
       tls_cert: (( file $atc_cert_file ))
@@ -51,6 +51,7 @@ instance_groups:
         tls:
           ca_cert:
             certificate: (( file $vault_cert_file ))
+          insecure_skip_verify: true
 
 
   - name: tsa

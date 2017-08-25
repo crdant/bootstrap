@@ -1,4 +1,4 @@
-path "/concourse/*" {
+path "concourse/*" {
   capabilities = ["create", "read", "update", "list"]
 }
 
