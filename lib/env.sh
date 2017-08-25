@@ -7,7 +7,10 @@ subdomain="bbl.gcp.${domain}"
 
 region="us-east1"
 storage_location="us"
-availability_zone="${region}-d"
+availability_zone_1="${region}-d"
+availability_zone_2="${region}-d"
+availability_zone_3="${region}-d"
+
 
 if [ -f "${BASEDIR}/bbl-state.json" ] ; then
   jumpbox=`bbl jumpbox-address | cut -d':' -f1 `
@@ -19,7 +22,8 @@ fi
 dns_zone="${env_id}-dns"
 dns_ttl=60
 
-service_account_name="${ENVIRONMENT_NAME}"
+# TO DO: fixed up to env_id next time I tear down
+service_account_name=`echo "${env_id}" | sed s/bbl-env-//`
 service_account="${service_account_name}@${project}.iam.gserviceaccount.com"
 
 key_dir="${BASEDIR}/keys"
