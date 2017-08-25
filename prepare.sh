@@ -12,7 +12,8 @@ service_accounts() {
 
 director() {
   echo "Creating the BOSH director..."
-  bbl up --iaas gcp --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" --gcp-zone "${availability_zone}" --gcp-region "${region}" --credhub
+  bbl up --iaas gcp --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" --gcp-zone "${availability_zone_1}" --gcp-region "${region}" --credhub
+  env_id=`bbl env-id`
   firewall
 }
 
@@ -30,7 +31,9 @@ client() {
   chmod 755 ${workdir}/bbl-env.sh
   eval "$bbl_env"
   # store the ssh key for easy use
-  chmod 600 ${key_dir}/id_jumpbox_${env_id}.pem
+  if [ -f ${key_dir}/id_jumpbox_${env_id}.pem ] ; then
+    chmod 600 ${key_dir}/id_jumpbox_${env_id}.pem
+  fi
   bbl ssh-key > ${key_dir}/id_jumpbox_${env_id}.pem
   chmod 400 ${key_dir}/id_jumpbox_${env_id}.pem
 
