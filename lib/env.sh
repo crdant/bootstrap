@@ -23,7 +23,7 @@ dns_zone="${env_id}-dns"
 dns_ttl=60
 
 # TO DO: fixed up to env_id next time I tear down
-service_account_name=`echo "${env_id}" | sed s/bbl-env-//`
+service_account_name=`echo ${subdomain} | tr . -`
 service_account="${service_account_name}@${project}.iam.gserviceaccount.com"
 
 key_dir="${BASEDIR}/keys"
