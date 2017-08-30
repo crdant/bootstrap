@@ -8,7 +8,7 @@ releases:
 instance_groups:
 - instances: 1
   name: vault
-  networks: [{name: private, static_ips: (( grab $vault_static_ip )), default: [dns, gateway]}]
+  networks: [{name: private, static_ips: (( vault-static-ip )), default: [dns, gateway]}]
   persistent_disk: 4096
   properties:
     vault:
@@ -30,8 +30,8 @@ instance_groups:
         listener:
           tcp:
             tls:
-              certificate: (( file $vault_cert_file ))
-              key: (( file $vault_key_file ))
+              certificate: (( vault-cert ))
+              key: (( vault-key ))
 
 stemcells:
 - alias: trusty

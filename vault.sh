@@ -40,14 +40,15 @@ releases () {
   bosh -n -e ${env_id} upload-release https://bosh.io/d/github.com/cloudfoundry-community/vault-boshrelease?v=${vault_version} --sha1 ${vault_checksum}
 }
 
-prepare_manifest () {
-  local manifest=${workdir}/vault.yml
-  vault_static_ip=${vault_static_ip} spruce merge ${manifest_dir}/vault.yml > ${manifest}
+interpolate () {
+  local manifest=${manifest_dir}/vault.yml
+  bosh interpolate ${manifest} --var vault-static-ip="${vault_static_ip}" --var-file vault-cert="${vault_cert_file}" --var-file vault-key="${vault_key_file}"
 }
 
 deploy () {
-  local manifest=${workdir}/vault.yml
-  bosh -n -e ${env_id} -d vault deploy ${manifest}
+  local manifest=${manifest_dir}/vault.yml
+  bosh -n -e ${env_id} -d vault deploy ${manifest} \
+    --var vault-static-ip="${vault_static_ip}" --var-file vault-cert="${vault_cert_file}" --var-file vault-key="${vault_key_file}"
 }
 
 firewall() {
@@ -93,8 +94,8 @@ if [ $# -gt 0 ]; then
       release )
         release
         ;;
-      manifest )
-          prepare_manifest
+      interpolate )
+        interpolate
         ;;
       deploy )
         deploy
@@ -127,7 +128,6 @@ fi
 ssl_certificates
 stemcell
 releases
-prepare_manifest
 deploy
 firewall
 tunnel
