@@ -19,12 +19,12 @@ instance_groups:
       ldap:
         ssl:
           active: true
-          server_cert: (( ldap-cert ))
-          server_key: (( ldap-key ))
-          ca_cert: (( ldap-cert ))
-        olcSuffix: (( olc-suffix ))
-        olcRootDN: (( olc-root-dn ))
-        olcRootPW: (( olc-root-password ))
+          server_cert: ((ldap-cert))
+          server_key: ((ldap-key))
+          ca_cert: ((ldap-cert))
+        olcSuffix: ((olc-suffix))
+        olcRootDN: ((olc-root-dn))
+        olcRootPW: ((olc-root-password))
 
 update:
   canaries: 1
