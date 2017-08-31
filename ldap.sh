@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
+. "${BASEDIR}/lib/generate_passphrase.sh"
 
 stemcell_version=3431.13
 stemcell_checksum=8ae6d01f01f627e70e50f18177927652a99a4585
 
-ldap_version=0.3.0
-ldap_checksum=36fd3294f756372ff9fbbd6dfac11fe6030d02f9
-ldap_static_ip=10.0.31.
+ldap_release_repository=https://github.com/cloudfoundry-community/openldap-boshrelease.git
+ldap_static_ip=10.0.47.195
+ldap_cert_file="${key_dir}/ldap-${env_id}.crt"
+ldap_key_file="${key_dir}/ldap-${env_id}.key"
+
 # ldap_static_ip=10.244.0.2
 ldap_port=636
 
@@ -31,8 +34,21 @@ stemcell () {
   bosh -n -e ${env_id} upload-stemcell https://bosh.io/d/stemcells/bosh-google-kvm-ubuntu-trusty-go_agent?v=${stemcell_version} --sha1 ${stemcell_checksum}
 }
 
+clone_release () {
+  if [ ! -d ${workdir}/pcf_pipelines ] ; then
+    git clone ${ldap_release_repository} ${workdir}/openldap-boshrelease
+  else
+    pushd ${workdir}/pcf_pipelines
+    git pull ${ldap_release_repository}
+    popd
+  fi
+}
+
 releases () {
-  bosh -n -e ${env_id} upload-release https://github.com/cloudfoundry-community/openldap-boshrelease/archive/v${ldap_version}.tar.gz --sha1 ${ldap_checksum}
+  clone_release
+  pushd ${workdir}/openldap-boshrelease
+    bosh -n create-release && bosh -n -e ${env_id} upload-release
+  popd
 }
 
 
@@ -43,14 +59,13 @@ safe_auth () {
 vars () {
   safe_auth
 
-  ldap_olc_suffix='cn=config'
-  ldap_olc_root_dn="cn=admin,dc=crdant,dc="
-  ldap_olc_root_password=`safe get secret/bootstrap/concourse/admin:value`
+  ldap_olc_suffix='cn=config,dc=crdant,dc=io'
+  ldap_olc_root_dn="cn=admin,${ldap_olc_suffix}"
+  ldap_olc_root_password=`safe get secret/bootstrap/ldap/admin:value`
 
   if [ -z "${ldap_olc_root_password}" ] ; then
     safe set secret/bootstrap/ldap/admin value=`generate_passphrase 4`
-
-    ldap_olc_root_password=`safe get secret/bootstrap/concourse/admin:value`
+    ldap_olc_root_password=`safe get secret/bootstrap/ldap/admin:value`
   fi
 }
 
@@ -58,9 +73,9 @@ interpolate () {
   local manifest=${manifest_dir}/ldap.yml
 
   vars
-  bosh -n -e ${env_id} -d ldap deploy ${manifest} \
+  bosh interpolate ${manifest} \
     --var olc-suffix="${ldap_olc_suffix}" --var olc-root-dn="${ldap_olc_root_dn}" --var olc-root-password="$ldap_olc_root_password" \
-    --var-file ldap-cert="${key_dir}/ldap-${env_id}.crt" --var-file ldap-key="${key_dir}/ldap-${env_id}.key"
+    --var-file ldap-cert="${ldap_cert_file}" --var-file ldap-key="${ldap_key_file}"
 }
 
 deploy () {
@@ -70,7 +85,7 @@ deploy () {
 
   vars
 
-  bosh -n -e ${env_id} -d ldap deploy ${manifest} \
+  bosh -n -e ${env_id} -d openldap deploy ${manifest} \
     --var olc-suffix="${ldap_olc_suffix}" --var olc-root-dn="${ldap_olc_root_dn}" --var olc-root-password="$ldap_olc_root_password" \
     --var-file ldap-cert="${key_dir}/ldap-${env_id}.crt" --var-file ldap-key="${key_dir}/ldap-${env_id}.key"
 }
@@ -80,7 +95,7 @@ firewall() {
 }
 
 tunnel () {
-  ssh -fnNT -L ${ldap_port}:${ldap_static_ip}:${ldap_port} jumpbox@${jumpbox} -i $BOSH_GW_PRIVATE_KEY
+  ssh -fnNT -L 6${ldap_port}:${ldap_static_ip}:${ldap_port} jumpbox@${jumpbox} -i $BOSH_GW_PRIVATE_KEY
 }
 
 teardown () {
@@ -101,7 +116,7 @@ if [ $# -gt 0 ]; then
         stemcell
         ;;
       release )
-        release
+        releases
         ;;
       interpolate )
         interpolate
@@ -134,4 +149,3 @@ releases
 deploy
 firewall
 tunnel
-init
