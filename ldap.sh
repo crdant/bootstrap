@@ -74,7 +74,7 @@ interpolate () {
 
   vars
   bosh interpolate ${manifest} \
-    --var olc-suffix="${ldap_olc_suffix}" --var olc-root-dn="${ldap_olc_root_dn}" --var olc-root-password="$ldap_olc_root_password" \
+    --var olc-suffix="${ldap_olc_suffix}" --var olc-root-dn="${ldap_olc_root_dn}" --var olc-root-password="${ldap_olc_root_password}" --var ldap-static-ip="${ldap_static_ip}" \
     --var-file ldap-cert="${ldap_cert_file}" --var-file ldap-key="${ldap_key_file}"
 }
 
@@ -86,7 +86,7 @@ deploy () {
   vars
 
   bosh -n -e ${env_id} -d openldap deploy ${manifest} \
-    --var olc-suffix="${ldap_olc_suffix}" --var olc-root-dn="${ldap_olc_root_dn}" --var olc-root-password="$ldap_olc_root_password" \
+    --var olc-suffix="${ldap_olc_suffix}" --var olc-root-dn="${ldap_olc_root_dn}" --var olc-root-password="${ldap_olc_root_password}" --var ldap-static-ip="${ldap_static_ip}" \
     --var-file ldap-cert="${key_dir}/ldap-${env_id}.crt" --var-file ldap-key="${key_dir}/ldap-${env_id}.key"
 }
 

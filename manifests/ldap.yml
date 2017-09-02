@@ -11,7 +11,7 @@ instance_groups:
   vm_type: n1-standard-1
   stemcell: trusty
   azs: [z2]
-  networks: [{name: private}]
+  networks: [{name: private, static_ips: ((ldap-static-ip)), default: [dns, gateway]}]
   jobs:
   - name: ldap-server
     release: openldap
