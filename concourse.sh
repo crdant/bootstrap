@@ -170,7 +170,7 @@ ssl_certificates
 stemcell
 releases
 prepare_manifest
-deploy
 lbs
+deploy
 dns
 login
