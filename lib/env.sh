@@ -8,13 +8,14 @@ subdomain="bbl.gcp.${domain}"
 region="us-east1"
 storage_location="us"
 availability_zone_1="${region}-d"
-availability_zone_2="${region}-d"
-availability_zone_3="${region}-d"
+availability_zone_2="${region}-c"
+availability_zone_3="${region}-b"
 
 
 if [ -f "${BASEDIR}/bbl-state.json" ] ; then
   jumpbox=`bbl jumpbox-address | cut -d':' -f1 `
   env_id=`bbl env-id`
+  short_id=`bbl env-id | sed s/bbl-env-// | cut -dt -f1`
 else
   env_id=`echo ${subdomain} | tr . -`
 fi
