@@ -31,15 +31,15 @@ instance_groups:
       bind_port: 80
       tls_bind_port: 443
       # replace with your CI's externally reachable URL, e.g. https://ci.foo.com
-      external_url:  (( grab $concourse_url ))
+      external_url:  ((concoure-url))
 
       # replace with username/password, or configure GitHub auth
-      basic_auth_username: (( grab $concourse_user ))
-      basic_auth_password: (( grab $concourse_password ))
+      basic_auth_username: ((concourse-user))
+      basic_auth_password: ((concourse-password))
 
       # replace with your SSL cert and key
-      tls_cert: (( file $atc_cert_file ))
-      tls_key: (( file $atc_key_file ))
+      tls_cert: ((atc-cert-file))
+      tls_key: ((atc-key-file))
 
       postgresql_database: &atc_db atc
 
@@ -47,10 +47,10 @@ instance_groups:
         url: https://10.0.31.195:8200
         auth:
           backend: token
-          client_token: (( grab $atc_vault_token ))
+          client_token: ((atc-vault-token))
         tls:
           ca_cert:
-            certificate: (( file $vault_cert_file ))
+            certificate: ((vault-cert-file))
           insecure_skip_verify: true
 
 

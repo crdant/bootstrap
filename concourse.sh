@@ -11,11 +11,11 @@ concourse_checksum=e262b0fb209df6134ea15917e2b9b8bfb8d0d0d1
 garden_version=1.6.0
 garden_checksum=58fbc64aff303e6d76899441241dd5dacef50cb7
 
-export concourse_host="concourse.${subdomain}"
-export concourse_url="https://${concourse_host}"
-export concourse_user=admin
-export atc_key_file="${key_dir}/atc-${env_id}.key"
-export atc_cert_file="${key_dir}/atc-${env_id}.crt"
+concourse_host="concourse.${subdomain}"
+concourse_url="https://${concourse_host}"
+concourse_user=admin
+atc_key_file="${key_dir}/atc-${env_id}.key"
+atc_cert_file="${key_dir}/atc-${env_id}.crt"
 
 ssl_certificates () {
   lb_key_file="${key_dir}/web-${env_id}.key"
@@ -63,20 +63,33 @@ safe_auth () {
   jq --raw-output '.auth.client_token' ${key_dir}/bootstrap-${env_id}-token.json | safe auth token
 }
 
-prepare_manifest () {
-  local manifest=${workdir}/concourse.yml
-  export atc_vault_token=`jq --raw-output '.auth.client_token' ${key_dir}/atc-${env_id}-token.json`
-  export vault_cert_file=${key_dir}/vault-${env_id}.crt
+vars () {
+  atc_vault_token=`jq --raw-output '.auth.client_token' ${key_dir}/atc-${env_id}-token.json`
+  vault_cert_file=${key_dir}/vault-${env_id}.crt
   safe_auth
   safe set secret/bootstrap/concourse/admin value=`generate_passphrase 4`
-  export concourse_password=`safe get secret/bootstrap/concourse/admin:value`
+  concourse_password=`safe get secret/bootstrap/concourse/admin:value`
 
-  spruce merge --prune tls ${manifest_dir}/concourse.yml > $manifest
+  echo <<VAR_ARGUMENTS
+    --var concourse-url="${concourse_url}" --var concourse-user=${concourse_user} --var concourse-password=${concourse_password}
+    --var-file atc-cert-file=${atc_cert_file} --var-file atc-key-file="${atc_key_file}"
+    --var-file vault-cert-file="${vault_cert_file}" --var-file vault-token="${atc_vault_token}"
+VAR_ARGUMENTS
+
+}
+
+interpolate () {
+  local manifest=${workdir}/concourse.yml
+
+  vars
+  bosh interpolate "${manifest}" `vars`
 }
 
 deploy () {
   local manifest=${workdir}/concourse.yml
-  bosh -n -e "${env_id}" -d concourse deploy "${manifest}"
+
+  vars
+  bosh -n -e "${env_id}" -d concourse deploy "${manifest}" `vars`
 }
 
 lbs () {
@@ -133,9 +146,6 @@ if [ $# -gt 0 ]; then
       release )
         release
         ;;
-      manifest )
-        prepare_manifest
-        ;;
       deploy )
         deploy
         ;;
@@ -156,6 +166,9 @@ if [ $# -gt 0 ]; then
       url )
         url
         ;;
+      interpolate )
+        interpolate
+        ;;
       * )
         echo "Unrecognized option: $1" 1>&2
         exit 1
@@ -169,7 +182,6 @@ fi
 ssl_certificates
 stemcell
 releases
-prepare_manifest
 lbs
 deploy
 dns
