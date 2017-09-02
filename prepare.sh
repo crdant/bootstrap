@@ -11,7 +11,7 @@ service_accounts() {
 }
 
 director() {
-  echo "Creating the BOSH director..."
+  echo "Creating the $env_id BOSH director..."
   bbl up --iaas gcp --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" --gcp-zone "${availability_zone_1}" --gcp-region "${region}" --credhub
   env_id=`bbl env-id`
   firewall
@@ -24,7 +24,7 @@ firewall() {
 }
 
 client() {
-  echo "Configuring BOSH client for the new director..."
+  echo "Configuring BOSH client for the $env_id director..."
   # can't reuse bbl print-env without redoing the tunnel (with new port), so be aware of that by saving the variable setting
   bbl_env=`bbl print-env`
   echo "${bbl_env}" | sed '/ssh/ d' > ${workdir}/bbl-env.sh
@@ -43,7 +43,7 @@ client() {
 }
 
 login() {
-  echo "Logging into the new director..."
+  echo "Logging into the $env_id director..."
   . "${workdir}/bbl-env.sh"
   bosh log-in -e `bbl env-id` --client="${BOSH_CLIENT}" --client-secret="${BOSH_CLIENT_SECRET}"
 }
