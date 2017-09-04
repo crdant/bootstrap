@@ -23,6 +23,16 @@ firewall() {
   gcloud --project "${project}" compute firewall-rules update ${env_id}-bosh-open --target-tags=${env_id}-bosh-director,${env_id}-internal
 }
 
+dns () {
+  # TODO: move this to prepare.sh
+  gcloud dns managed-zones --project ${project} create ${dns_zone} --dns-name "${subdomain}." --description "Zone for ${subdomain}"
+
+  # TO DO: put this in here like in https://github.com/crdant/pcf-on-gcp
+  # update_root_dns
+  # echo "Waiting for ${DNS_TTL} seconds for the Root DNS to sync up..."
+  # sleep "${DNS_TTL}"
+}
+
 client() {
   echo "Configuring BOSH client for the $env_id director..."
   # can't reuse bbl print-env without redoing the tunnel (with new port), so be aware of that by saving the variable setting
@@ -54,6 +64,9 @@ if [ $# -gt 0 ]; then
       accounts )
         service_accounts
         ;;
+      dns )
+        dns
+        ;;
       director )
         director
         ;;
@@ -78,5 +91,6 @@ fi
 
 service_accounts
 director
+dns
 client
 login
