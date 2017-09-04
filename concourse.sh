@@ -64,10 +64,13 @@ safe_auth () {
 }
 
 vars () {
+  admin_password="${1}"
   atc_vault_token=`jq --raw-output '.auth.client_token' ${key_dir}/atc-${env_id}-token.json`
   vault_cert_file=${key_dir}/vault-${env_id}.crt
   safe_auth
-  safe set secret/bootstrap/concourse/admin value=`generate_passphrase 4`
+  if [ -n ${admin_password} ] ; then
+    safe set secret/bootstrap/concourse/admin value="${admin_password}"
+  fi
   concourse_password=`safe get secret/bootstrap/concourse/admin:value`
 
   echo <<VAR_ARGUMENTS
@@ -80,16 +83,13 @@ VAR_ARGUMENTS
 
 interpolate () {
   local manifest=${workdir}/concourse.yml
-
-  vars
   bosh interpolate "${manifest}" `vars`
 }
 
 deploy () {
   local manifest=${workdir}/concourse.yml
-
-  vars
-  bosh -n -e "${env_id}" -d concourse deploy "${manifest}" `vars`
+  admin_password=`generate_passphrase 4`
+  bosh -n -e "${env_id}" -d concourse deploy "${manifest}" `vars ${admin_password}`
 }
 
 lbs () {
@@ -100,13 +100,7 @@ dns() {
   echo "Setting up DNS..."
 
   local transaction_file="${workdir}/dns-transaction-${dns_zone}.xml"
-  gcloud dns managed-zones --project ${project} create ${dns_zone} --dns-name "${subdomain}." --description "Zone for ${subdomain}"
-
-  # TO DO: put this in here like in https://github.com/crdant/pcf-on-gcp
-  # update_root_dns
-  # echo "Waiting for ${DNS_TTL} seconds for the Root DNS to sync up..."
-  # sleep "${DNS_TTL}"
-
+  
   gcloud dns record-sets --project "${project}" transaction start -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
 
   # set up the load balancer in DNS
@@ -128,7 +122,8 @@ url () {
 teardown () {
   bosh -n -e "${env_id}" -d concourse delete-deployment
   bbl delete-lbs
-  gcloud dns managed-zones --project ${project} delete ${dns_zone}
+  # TODO: clean up DNS
+  # gcloud dns managed-zones --project ${project} delete ${dns_zone}
 }
 
 if [ $# -gt 0 ]; then
@@ -168,6 +163,9 @@ if [ $# -gt 0 ]; then
         ;;
       interpolate )
         interpolate
+        ;;
+      safe_auth | auth )
+        safe_auth
         ;;
       * )
         echo "Unrecognized option: $1" 1>&2
