@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
+. "${BASEDIR}/lib/secrets.sh"
 . "${BASEDIR}/lib/generate_passphrase.sh"
 
 concourse_team=pcf
@@ -10,15 +11,25 @@ pcf_concourse_user=pivotal
 
 pcf_install_pipeline="deploy-pcf"
 pcf_pipelines_remote="https://github.com/pivotal-cf/pcf-pipelines.git"
-pcf_service_account_name=`echo "pcf-${env_id}" | sed s/bbl-env-//`
+pcf_pipelines_local=${workdir}/pcf_pipelines
+pcf_pipelines_version="v0.17.0-rc.8"
+pipeline_file="${workdir}/pcf_pipelines/install-pcf/gcp/pipeline.yml"
+parameter_file="${workdir}/${env_id}-${pcf_install_pipeline}-params.yml"
+
+pcf_service_account_name="pcf-${short_id}"
 pcf_service_account="${pcf_service_account_name}@${project}.iam.gserviceaccount.com"
 pcf_key_file=${key_dir}/${project}-${pcf_service_account_name}.json
+pcf_dns_zone="pcf-${short_id}-zone"         # TO DO: See if I can get this from the Terraform state (or even the pipelines terraform file)
+pcf_subdomain="pcf.${subdomain}"
+
+terraform_statefile_bucket="${env_id}-bucket"
 
 prepare_concourse() {
-  jq --raw-output '.auth.client_token' ${key_dir}/bootstrap-${env_id}-token.json | safe auth token
+  safe_auth_bootstrap
   concourse_admin="admin"
-  admin_password=`safe get secret/bootstrap/concourse/admin:value`
+  admin_password=`safe get secret/bootstrap/concourse/${concourse_admin}:value`
   fly --target ${env_id} login --team-name main --ca-cert ${key_dir}/atc-${env_id}.crt --concourse-url=${concourse_url} --username=${concourse_admin} --password=${admin_password}
+  fly --target ${env_id} sync
 
   safe set secret/bootstrap/concourse/${pcf_concourse_user} value=`generate_passphrase 4`
   pcf_concourse_password=`safe get secret/bootstrap/concourse/${pcf_concourse_user}:value`
@@ -26,7 +37,7 @@ prepare_concourse() {
 }
 
 concourse_login() {
-  jq --raw-output '.auth.client_token' ${key_dir}/bootstrap-${env_id}-token.json | safe auth token
+  safe_auth_bootstrap
   pcf_concourse_password=`safe get secret/bootstrap/concourse/pivotal:value`
   fly --target ${concourse_target} login --team-name ${concourse_team} --ca-cert ${key_dir}/atc-${env_id}.crt --concourse-url=${concourse_url} --username=${pcf_concourse_user} --password=${pcf_concourse_password}
 }
@@ -48,27 +59,57 @@ service_accounts () {
   gcloud iam service-accounts --project "${project}" keys create "${pcf_key_file}"  --iam-account "${pcf_service_account}"
 }
 
+buckets () {
+  echo "Creating storage buckets for Terraform state..."
+  gsutil mb -l ${storage_location} gs://${terraform_statefile_bucket}
+  gsutil acl ch -u ${service_account}:O gs://${terraform_statefile_bucket}
+  gsutil versioning set on gs://${terraform_statefile_bucket}
+}
+
 download () {
+  # TODO: Switch to Pivnet?
   if [ ! -d ${workdir}/pcf_pipelines ] ; then
-    git clone ${pcf_pipelines_remote} ${workdir}/pcf_pipelines
+    git clone ${pcf_pipelines_remote} ${pcf_pipelines_local}
   else
-    pushd ${workdir}/pcf_pipelines
+    pushd ${pcf_pipelines_local}
     git pull ${pcf_pipelines_remote}
     popd
   fi
+  pushd ${pcf_pipelines_local}
+  git checkout tags/${pcf_pipelines_version}
+  popd
+  modernize_pipeline
+}
+
+modernize_pipeline() {
+  sed -i -e 's/{{/((/g' "${pipeline_file}"
+  sed -i -e 's/}}/))/g' "${pipeline_file}"
 }
 
 safe_auth () {
   jq --raw-output '.auth.client_token' ${key_dir}/conrad-${env_id}-token.json | safe auth token
 }
 
+get_secret () {
+  local secret_root="concourse/${concourse_team}/${pcf_install_pipeline}"
+  local secret="${1}"
+
+  if  [ ${secret} == "concourse" ] ; then
+    safe_auth_bootstrap
+    safe get secret/bootstrap/concourse/pivotal:value
+    return
+  fi
+
+  safe_auth
+  safe get ${secret_root}/${secret}:value
+}
+
 secrets () {
   local secret_root="concourse/${concourse_team}/${pcf_install_pipeline}"
-  echo $secret_root
-  exit 0
   safe_auth
 
   safe set ${secret_root}/gcp_service_account_key value="$(cat ${pcf_key_file})"
+
   # N.B. set these two on your own, No API for them
   # safe set ${secret_root}/gcp_storage_access_key value=
   # safe set ${secret_root}/gcp_storage_secret_key:
@@ -95,9 +136,9 @@ secrets () {
 
   safe set ${secret_root}/db_accountdb_username value=pcf-accounts
   safe gen ${secret_root}/db_accountdb_password value
-  safe set ${secret_root}/db_networkpolicyserverdb_username value=pcf-policy-server
+  safe set ${secret_root}/db_networkpolicyserverdb_username value=pcf-policy
   safe gen ${secret_root}/db_networkpolicyserverdb_password value
-  safe set ${secret_root}/db_nfsvolumedb_username value=pcf-nfs-volumes
+  safe set ${secret_root}/db_nfsvolumedb_username value=pcf-nfs
   safe gen ${secret_root}/db_nfsvolumedb_password value
   safe set ${secret_root}/db_silk_username value=pcf-silk
   safe gen ${secret_root}/db_silk_password value
@@ -106,13 +147,13 @@ secrets () {
 }
 
 params() {
-  cat <<PARAMS > ${workdir}/install-pcf.yml
+  cat <<PARAMS > ${parameter_file}
 
   # GCP project to create the infrastructure in
   gcp_project_id: ${project}
 
   # Identifier to prepend to GCP infrastructure names/labels
-  gcp_resource_prefix: pcf-${env_id}
+  gcp_resource_prefix: pcf-${short_id}
 
   # GCP region
   gcp_region: ${region}
@@ -125,7 +166,10 @@ params() {
   # Storage Location
   gcp_storage_bucket_location: ${storage_location}
 
-  terraform_statefile_bucket:
+  terraform_statefile_bucket: ${terraform_statefile_bucket}
+
+  # Operations Manager Trusted Certificates
+  pcf_opsman_trusted_certs: |
 
   # Elastic Runtime SSL configuration
   # Set pcf_ert_ssl_cert to 'generate' if you'd like a self-signed cert to be made
@@ -133,8 +177,8 @@ params() {
   pcf_ert_ssl_key:
 
   # Elastic Runtime Domain
-  pcf_ert_domain: ${subdomain} # This is the domain you will access ERT with
-  opsman_domain_or_ip_address: ${subdomain} # This should be your pcf_ert_domain with "opsman." as a prefix
+  pcf_ert_domain: ${pcf_subdomain} # This is the domain you will access ERT with
+  opsman_domain_or_ip_address: opsman.${pcf_subdomain} # This should be your pcf_ert_domain with "opsman." as a prefix
 
   ert_errands_to_disable: none
 
@@ -146,43 +190,124 @@ params() {
 
   mysql_monitor_recipient_email: ${email} # Email address for sending mysql monitor notifications
   mysql_backups: disable   # Whether to enable MySQL backups. (disable|s3|scp)
+  mysql_backups_s3_access_key_id:
+  mysql_backups_s3_bucket_name:
+  mysql_backups_s3_bucket_path:
+  mysql_backups_s3_cron_schedule:
+  mysql_backups_s3_endpoint_url:
+  mysql_backups_s3_secret_access_key:
+  mysql_backups_scp_cron_schedule:
+  mysql_backups_scp_destination:
+  mysql_backups_scp_key:
+  mysql_backups_scp_port:
+  mysql_backups_scp_server:
+  mysql_backups_scp_user:
 PARAMS
 }
 
 pipeline () {
-  ${BASEDIR}/concourse.sh login
+  concourse_login
   fly --target ${concourse_target} set-pipeline --pipeline ${pcf_install_pipeline} \
-    --config ${workdir}/pcf_pipelines/install-pcf/gcp/pipeline.yml \
-    --load-vars-from ${workdir}/install-pcf.yml
-  fly --target ${concourse_target} unpause-pipeline --pipeline ${pcf_install_pipeline} \
-    --config ${workdir}/pcf_pipelines/install-pcf/gcp/pipeline.yml \
-    --load-vars-from ${workdir}/install-pcf.yml
+    --config ${pipeline_file} --load-vars-from ${parameter_file}
+  fly --target ${concourse_target} unpause-pipeline --pipeline ${pcf_install_pipeline}
 }
 
-install () {
-    fly --target ${concourse_target} trigger-job -j ${pcf_install_pipeline}/bootstrap-terraform-state
-    fly --target ${concourse_target} trigger-job -j ${pcf_install_pipeline}/create-infrastructure
-    fly --target ${concourse_target} trigger-job -j ${pcf_install_pipeline}/configure-director
+trigger() {
+  job="${1}"
+  echo "Triggering job ${1}"
+  fly --target ${concourse_target} trigger-job -j ${pcf_install_pipeline}/${job}
+  fly --target ${concourse_target} watch -j ${pcf_install_pipeline}/${job}
 }
 
-teardown () {
+hijack() {
+  job="${1}"
+  echo "Triggering job ${1}"
+  fly --target ${concourse_target} hijack -j ${pcf_install_pipeline}/${job}
+  fly --target ${concourse_target} watch -j ${pcf_install_pipeline}/${job}
+}
+
+
+bootstrap_terraform() {
+  echo "Bootstrapping PCF infrastructure..."
+  trigger "bootstrap-terraform-state"
+}
+
+create_infrastructure () {
+  echo "Creating PCF infrastructure..."
+  trigger "create-infrastructure"
+  dns
+}
+
+dns () {
+  # TODO: trap errors and delete transaction file for sanity (mayhaps just rollback with gcloud dns)
+  echo "Delegating DNS..."
+  local name_servers=( `gcloud dns managed-zones describe "${pcf_dns_zone}" --format json | jq -r  '.nameServers | join(" ")'` )
+  local transaction_file="${WORKDIR}/pcf-dns-transaction-${pcf_dns_zone}.xml"
+
+  gcloud dns record-sets transaction start -z "${pcf_dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
+
+  gcloud dns record-sets transaction add -z "${pcf_dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[0]}" --transaction-file="${transaction_file}" --no-user-output-enabled
+  gcloud dns record-sets transaction add -z "${pcf_dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[1]}" --transaction-file="${transaction_file}" --no-user-output-enabled
+  gcloud dns record-sets transaction add -z "${pcf_dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[2]}" --transaction-file="${transaction_file}" --no-user-output-enabled
+  gcloud dns record-sets transaction add -z "${pcf_dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[3]}" --transaction-file="${transaction_file}" --no-user-output-enabled
+
+  gcloud dns record-sets transaction execute -z "${pcf_dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
+}
+
+configure_director() {
+  echo "Configuring Ops Manger Director..."
+  trigger "configure-director"
+}
+
+install() {
+  bootstrap_terraform
+  create_infrastructure
+  configure_director
+}
+
+wipe_env() {
   fly --target ${concourse_target} trigger-job -j ${pcf_install_pipeline}/wipe-env
+  fly --target ${concourse_target} watch -j ${pcf_install_pipeline}/wipe-env
+}
+
+teardown() {
+  wipe_env
+  fly --target ${concourse_target} destroy-pipeline -p "${pcf_install_pipeline}"
+
+  gsutil rm -l ${storage_location} gs://${terraform_statefile_bucket}
+
+  gcloud projects remove-iam-policy-binding "${project}" --member "serviceAccount:${pcf_service_account}" --role "roles/editor" --no-user-output-enabled
+
+  gcloud projects remove-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/compute.instanceAdmin" --no-user-output-enabled
+  gcloud projects remove-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/compute.networkAdmin" --no-user-output-enabled
+  gcloud projects remove-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/compute.storageAdmin" --no-user-output-enabled
+  gcloud projects remove-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/storage.admin" --no-user-output-enabled
+  gcloud projects remove-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/cloudsql.admin" --no-user-output-enabled
+  gcloud projects remove-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/dns.admin" --no-user-output-enabled
+  gcloud projects remove-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/compute.securityAdmin" --no-user-output-enabled
+
+  pcf_key_id=`jq --raw-output '.private_key_id' "${pcf_key_file}"`
+  gcloud iam service-accounts --project "${project}" keys delete "${pcf_key_id}"  --iam-account "${pcf_service_account}"
+  gcloud iam service-accounts --project "${project}" delete "${pcf_service_account}" --no-user-output-enabled
 }
 
 if [ $# -gt 0 ]; then
   while [ $# -gt 0 ]; do
     case $1 in
-      prepare )
+      service_accounts | accounts | security )
+        service_accounts
+        ;;
+      buckets | bucket | tfstate )
+        buckets
+        ;;
+      prepare_concourse | prepare )
         prepare_concourse
         ;;
-      login )
+      concourse_login | login )
         concourse_login
         ;;
-      accounts )
-        service_accounts
-        ;;
-      security )
-        service_accounts
+      download)
+        download
         ;;
       secrets )
         secrets
@@ -190,21 +315,51 @@ if [ $# -gt 0 ]; then
       params )
         params
         ;;
-      download)
-        download
+      pipeline | pipelines )
+        pipeline
+        ;;
+      install )
+        install
         ;;
       deploy )
         download
         pipeline
         install
         ;;
-      pipeline )
-        pipeline
+      modernize_pipeline | modernize)
+        modernize_pipeline
         ;;
-      install )
-        install
+      bootstrap_terraform | bootstrap)
+        bootstrap_terraform
         ;;
-      teardown )
+      create_infrastructure | infrastructure)
+        create_infrastructure
+        ;;
+      configure_director | director | opsman | om)
+        configure_director
+        ;;
+      wipe_env | wipe)
+        wipe_env
+        ;;
+      dns)
+        dns
+        ;;
+      safe_auth)
+        safe_auth
+        ;;
+      get_secret | password | secret)
+        get_secret "${2}"
+        shift
+        ;;
+      trigger)
+        trigger "${2}"
+        shift
+        ;;
+      hijack)
+        hijack "${2}"
+        shift
+        ;;
+      teardown)
         teardown
         ;;
       * )
@@ -225,4 +380,3 @@ secrets
 params
 pipeline
 install
-init
