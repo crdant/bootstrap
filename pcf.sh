@@ -11,9 +11,9 @@ pcf_concourse_user=pivotal
 
 pcf_install_pipeline="deploy-pcf"
 pcf_pipelines_remote="https://github.com/pivotal-cf/pcf-pipelines.git"
-pcf_pipelines_local=${workdir}/pcf_pipelines
-pcf_pipelines_version="v0.17.0-rc.8"
-pipeline_file="${workdir}/pcf_pipelines/install-pcf/gcp/pipeline.yml"
+pcf_pipelines_local=${workdir}/pcf-pipelines
+pcf_pipelines_version="v0.16.0"
+pipeline_file="${workdir}/pcf-pipelines/install-pcf/gcp/pipeline.yml"
 parameter_file="${workdir}/${env_id}-${pcf_install_pipeline}-params.yml"
 
 pcf_service_account_name="pcf-${short_id}"
@@ -68,16 +68,8 @@ buckets () {
 
 download () {
   # TODO: Switch to Pivnet?
-  if [ ! -d ${workdir}/pcf_pipelines ] ; then
-    git clone ${pcf_pipelines_remote} ${pcf_pipelines_local}
-  else
-    pushd ${pcf_pipelines_local}
-    git pull ${pcf_pipelines_remote}
-    popd
-  fi
-  pushd ${pcf_pipelines_local}
-  git checkout tags/${pcf_pipelines_version}
-  popd
+  pivnet download-product-files --product-slug pcf-automation --release-version ${pcf_pipelines_version} --download-dir ${workdir} --glob "pcf-pipelines-${pcf_pipelines_version}.tgz" --accept-eula
+  tar -xzf "${workdir}/pcf-pipelines-${pcf_pipelines_version}.tgz" -C "${workdir}"
   modernize_pipeline
 }
 
