@@ -24,6 +24,9 @@ pcf_subdomain="pcf.${subdomain}"
 
 terraform_statefile_bucket="${env_id}-bucket"
 
+mysql_backup_bucket=${short_id}-mysql-backups
+mysql_backup_schedule="0 0/72 * * *"
+
 prepare_concourse() {
   safe_auth_bootstrap
   concourse_admin="admin"
@@ -60,10 +63,15 @@ service_accounts () {
 }
 
 buckets () {
-  echo "Creating storage buckets for Terraform state..."
+  echo "Creating storage buckets..."
   gsutil mb -l ${storage_location} gs://${terraform_statefile_bucket}
   gsutil acl ch -u ${service_account}:O gs://${terraform_statefile_bucket}
   gsutil versioning set on gs://${terraform_statefile_bucket}
+
+  gsutil mb -l ${storage_location} gs://${mysql_backup_bucket}
+  gsutil acl ch -u ${service_account}:O gs://${mysql_backup_bucket}
+  gsutil versioning set on gs://${mysql_backup_bucket}
+
 }
 
 download () {
@@ -175,19 +183,19 @@ params() {
   ert_errands_to_disable: none
 
   # PCF Operations Manager minor version to install
-  opsman_major_minor_version: ^1\.11\..*$
+  opsman_major_minor_version: ^1\.10\..*$
 
   # PCF Elastic Runtime minor version to install
-  ert_major_minor_version: ^1\.11\..*$
+  ert_major_minor_version: ^1\.10\..*$
 
   mysql_monitor_recipient_email: ${email} # Email address for sending mysql monitor notifications
-  mysql_backups: disable   # Whether to enable MySQL backups. (disable|s3|scp)
-  mysql_backups_s3_access_key_id:
-  mysql_backups_s3_bucket_name:
+  mysql_backups: s3   # Whether to enable MySQL backups. (disable|s3|scp)
+  mysql_backups_s3_access_key_id: ((gcp_storage_access_key))
+  mysql_backups_s3_bucket_name: ${mysql_backup_bucket}
   mysql_backups_s3_bucket_path:
-  mysql_backups_s3_cron_schedule:
-  mysql_backups_s3_endpoint_url:
-  mysql_backups_s3_secret_access_key:
+  mysql_backups_s3_cron_schedule: ${mysql_backup_schedule}
+  mysql_backups_s3_endpoint_url: https://storage.googleapis.com
+  mysql_backups_s3_secret_access_key: ((gcp_storage_secret_key))
   mysql_backups_scp_cron_schedule:
   mysql_backups_scp_destination:
   mysql_backups_scp_key:
@@ -213,9 +221,8 @@ trigger() {
 
 hijack() {
   job="${1}"
-  echo "Triggering job ${1}"
+  echo "Hijacking job ${1}"
   fly --target ${concourse_target} hijack -j ${pcf_install_pipeline}/${job}
-  fly --target ${concourse_target} watch -j ${pcf_install_pipeline}/${job}
 }
 
 
