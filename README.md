@@ -33,7 +33,7 @@ A convenience script for this is coming soon.
 Each of the scripts has a `teardown` command-line argument (except `prepare.sh`). Run those, then run `teardown.sh`.
 
 1. Teardown PCF (`pcf.sh teardown`).
-2. Teardown LDAP (if you created it) with `ldap.sh teardown`.
+2. If you added LDAP, removeo it from the environment with `ldap.sh teardown`.
 3. Take down concourse with `concourse.sh teardown`.
 4. Get rid of Vault with `vault.sh teardown`.
 5. Lastly, take down the infrastructure with `teardown.sh`.
@@ -44,5 +44,7 @@ Each command has some subcommands for running a piece of what it does. More to c
 
 ## Dependencies
 
-1. [BOSH Boot Loader](https://github.com/cloudfoundry/bosh-bootloader) 4.4 or later.
-2. [Safe](https://github.com/starkandwayne/safe)  
+1. [BOSH Boot Loader](https://github.com/cloudfoundry/bosh-bootloader) 4.4 or later. It's in the Cloud Foundry tap on
+Homebrew, so Mac users can run `brew install cloudfoundry/tap/bbl`.
+2. [Safe](https://github.com/starkandwayne/safe). On a Mac you can run `brew install starkandwayne/cf/safe`.
+3. Hashicorp [Vault CLI](https://www.vaultproject.io). If you're on a Mac run `brew install vault`.
