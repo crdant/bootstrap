@@ -16,7 +16,7 @@ Bootstrap an environment to do various BOSH-y things. Currently GCP specific.
 1. Set the environment variable `PIVNET_TOKEN` to your Pivotal Network API token.
 1. Add secrets under `concourse/pcf/deploy-pcf` path for your Google Cloud Storage
    S3-compatible access key id (`gcp_storage_access_key`) and secret access key (`gcp_storage_secret_key`) in vault.
-1. Running the `pcf.sh` now will load [PCF Platform Automation with Concourse](https://network.pivotal.io/products/pcf-automation) (aka [PCF Pipelines]())
+1. Running the `pcf.sh` now will load [PCF Platform Automation with Concourse](https://network.pivotal.io/products/pcf-automation), nee [PCF Pipelines](https://github.com/pivotal-cf/pcf-pipelines), into the Concourse you just installed and trigger the right jobs to install PCF.
 
 ## Using the environment
 
