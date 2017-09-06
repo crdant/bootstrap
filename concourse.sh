@@ -84,7 +84,6 @@ deploy () {
   admin_password=`generate_passphrase 4`
   safe_auth_bootstrap
   safe set secret/bootstrap/concourse/admin value="${admin_password}"
-  vars
   bosh -n -e "${env_id}" -d concourse deploy "${manifest}" `vars`
 }
 
