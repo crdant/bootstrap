@@ -15,8 +15,8 @@ Bootstrap an environment to do various BOSH-y things. Currently GCP specific.
 1. (optional) Add LDAP to the environment with `ldap.sh`.
 1. Set the environment variable `PIVNET_TOKEN` to your Pivotal Network API token.
 1. Add secrets under `concourse/pcf/deploy-pcf` path for your Google Cloud Storage
-   S3-compatible access key id (`gcp_storage_access_key`) ans secret access key (`gcp_storage_secret_key`).
-1. Prepare the PCF pipelines and install PCF with `pcf.sh`.
+   S3-compatible access key id (`gcp_storage_access_key`) and secret access key (`gcp_storage_secret_key`) in vault.
+1. Running the `pcf.sh` now will load [PCF Platform Automation with Concourse](https://network.pivotal.io/products/pcf-automation) (aka [PCF Pipelines]())
 
 ## Using the environment
 
@@ -32,7 +32,7 @@ Concourse and PCF have load balancers. You can access them at the expected URIs 
 Each of the scripts has a `teardown` command-line argument (except `prepare.sh`). Run those, then run `teardown.sh`.
 
 1. Teardown PCF (`pcf.sh teardown`).
-2. If you added LDAP, removeo it from the environment with `ldap.sh teardown`.
+2. If you added LDAP, remove it from the environment with `ldap.sh teardown`.
 3. Take down concourse with `concourse.sh teardown`.
 4. Get rid of Vault with `vault.sh teardown`.
 5. Lastly, take down the infrastructure with `teardown.sh`.
@@ -47,3 +47,11 @@ Each command has some subcommands for running a piece of what it does. More to c
 Homebrew, so Mac users can run `brew install cloudfoundry/tap/bbl`.
 2. [Safe](https://github.com/starkandwayne/safe). On a Mac you can run `brew install starkandwayne/cf/safe`.
 3. Hashicorp [Vault CLI](https://www.vaultproject.io). If you're on a Mac run `brew install vault`.
+
+## Coming soon
+
+1. Forcing and/or testing without SSH multiplexing. I use it all the time, colleagues who don't are seeing some weirdness.
+1. Making this document more readable and useful.
+1. Making vault highly available.
+1. Making LDAP highly available.
+1. Other IaaSes.
