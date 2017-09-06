@@ -3,6 +3,7 @@
 BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
 . "${BASEDIR}/lib/generate_passphrase.sh"
+. "${BASEDIR}/lib/secrets.sh"
 
 stemcell_version=3431.13
 stemcell_checksum=8ae6d01f01f627e70e50f18177927652a99a4585
@@ -67,27 +68,25 @@ vars () {
   admin_password="${1}"
   atc_vault_token=`jq --raw-output '.auth.client_token' ${key_dir}/atc-${env_id}-token.json`
   vault_cert_file=${key_dir}/vault-${env_id}.crt
-  safe_auth
+  safe_auth_bootstrap
   if [ -n ${admin_password} ] ; then
     safe set secret/bootstrap/concourse/admin value="${admin_password}"
   fi
   concourse_password=`safe get secret/bootstrap/concourse/admin:value`
-
-  echo <<VAR_ARGUMENTS
+  cat <<VAR_ARGUMENTS
     --var concourse-url="${concourse_url}" --var concourse-user=${concourse_user} --var concourse-password=${concourse_password}
-    --var-file atc-cert-file=${atc_cert_file} --var-file atc-key-file="${atc_key_file}"
-    --var-file vault-cert-file="${vault_cert_file}" --var-file vault-token="${atc_vault_token}"
+    --var-file atc-cert-file="${atc_cert_file}" --var-file atc-key-file="${atc_key_file}"
+    --var-file vault-cert-file="${vault_cert_file}" --var-file atc-vault-token="${atc_vault_token}"
 VAR_ARGUMENTS
-
 }
 
 interpolate () {
-  local manifest=${workdir}/concourse.yml
+  local manifest=${manifest_dir}/concourse.yml
   bosh interpolate "${manifest}" `vars`
 }
 
 deploy () {
-  local manifest=${workdir}/concourse.yml
+  local manifest=${manifest_dir}/concourse.yml
   admin_password=`generate_passphrase 4`
   bosh -n -e "${env_id}" -d concourse deploy "${manifest}" `vars ${admin_password}`
 }
@@ -100,13 +99,15 @@ dns() {
   echo "Setting up DNS..."
 
   local transaction_file="${workdir}/dns-transaction-${dns_zone}.xml"
-  
+
   gcloud dns record-sets --project "${project}" transaction start -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
 
   # set up the load balancer in DNS
   lb_address=`gcloud compute --project ${project} forwarding-rules describe ${env_id}-concourse-https --region ${region} --format json | jq --raw-output '.IPAddress'`
   gcloud dns record-sets --project ${project} transaction add -z "${dns_zone}" --name "${concourse_host}" --ttl "${dns_ttl}" --type A "${lb_address}" --transaction-file="${transaction_file}"
   gcloud dns record-sets --project ${project} transaction execute -z "${dns_zone}" --transaction-file="${transaction_file}"
+
+  rm "${transaction_file}"
 }
 
 login () {
