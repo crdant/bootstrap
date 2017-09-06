@@ -14,6 +14,7 @@ Bootstrap an environment to do various BOSH-y things. Currently GCP specific.
 1. Add concourse to the environment with `concourse.sh`.
 1. (optional) Add LDAP to the environment with `ldap.sh`.
 1. Set the environment variable `PIVNET_TOKEN` to your Pivotal Network API token.
+1. An SSH key in your `.ssh` directory named `concourse_github` with the public key registered with your Github account.
 1. Add secrets under `concourse/pcf/deploy-pcf` path for your Google Cloud Storage
    S3-compatible access key id (`gcp_storage_access_key`) and secret access key (`gcp_storage_secret_key`) in vault.
 1. Running the `pcf.sh` now will load [PCF Platform Automation with Concourse](https://network.pivotal.io/products/pcf-automation), nee [PCF Pipelines](https://github.com/pivotal-cf/pcf-pipelines), into the Concourse you just installed and trigger the right jobs to install PCF.
@@ -25,7 +26,8 @@ make soure you source the file `work/bbl-env.sh` into your shell with `. work/bb
 The Vault and LDAP processes will also setup tunnels for you, so you'll be working through the default ports on `localhost` for each
 of those (8200 for Vault, 636 for LDA with SSL/TLS).  If the tunnels time out, you can recreate them with the sequence `./prepare.sh client login ; ./vault.sh tunnel ; ./ldap.sh tunnel`. *A convenience script for this is coming soon.*
 
-Concourse and PCF have load balancers. You can access them at the expected URIs based on your configuration.
+Concourse and PCF have load balancers. You can access them at the expected URIs based on your configuration. The PCF Pipelines are available in the
+concourse team `pcf`, with username `pivotal`. To get the password run ``
 
 ## Getting rid of the environment
 
@@ -47,9 +49,11 @@ Each command has some subcommands for running a piece of what it does. More to c
 Homebrew, so Mac users can run `brew install cloudfoundry/tap/bbl`.
 2. [Safe](https://github.com/starkandwayne/safe). On a Mac you can run `brew install starkandwayne/cf/safe`.
 3. Hashicorp [Vault CLI](https://www.vaultproject.io). If you're on a Mac run `brew install vault`.
+4. The [Pivotal Network](https://network.pivotal.io) CLI, [`pivnet`](https://github.com/pivotal-cf/pivnet-cli). Again, with Homebrew `brew install pivotal/tap/pivotal-cli`.
 
 ## Coming soon
 
+1. Simple script(s) to do the manual stuff more easily.
 1. Forcing and/or testing without SSH multiplexing. I use it all the time, colleagues who don't are seeing some weirdness.
 1. Making this document more readable and useful.
 1. Making vault highly available.
