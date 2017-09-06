@@ -374,6 +374,7 @@ fi
 accounts
 prepare_concourse
 concourse_login
+buckets
 download
 secrets
 params
