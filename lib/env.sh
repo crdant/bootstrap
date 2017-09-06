@@ -5,11 +5,11 @@ project=fe-cdantonio
 domain_token=`echo ${domain} | tr . -`
 subdomain="bbl.gcp.${domain}"
 
-region="us-east1"
+region="us-east4"
 storage_location="us"
-availability_zone_1="${region}-d"
+availability_zone_1="${region}-b"
 availability_zone_2="${region}-c"
-availability_zone_3="${region}-b"
+availability_zone_3="${region}-a"
 
 
 if [ -f "${BASEDIR}/bbl-state.json" ] ; then
