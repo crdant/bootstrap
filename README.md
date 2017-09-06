@@ -20,13 +20,12 @@ Bootstrap an environment to do various BOSH-y things. Currently GCP specific.
 
 ## Using the environment
 
-All your connections will be through SSH tunnels to the Jumpbox that the BOSH Bootloader creates. To use the `bosh` CLI,
+All your connections to BOSH, Vault, and LDAP will be through SSH tunnels to the Jumpbox that the BOSH Bootloader creates. To use the `bosh` CLI,
 make soure you source the file `work/bbl-env.sh` into your shell with `. work/bbl-env.sh`, which will set up the proxy that BOSH uses.
 The Vault and LDAP processes will also setup tunnels for you, so you'll be working through the default ports on `localhost` for each
-of those (8200 for Vault, 636 for LDA with SSL/TLS).
+of those (8200 for Vault, 636 for LDA with SSL/TLS).  If the tunnels time out, you can recreate them with the sequence `./prepare.sh client login ; ./vault.sh tunnel ; ./ldap.sh tunnel`. *A convenience script for this is coming soon.*
 
-If the tunnels time out, you can recreate them with the sequence `./prepare.sh client login ; ./vault.sh tunnel ; ./ldap.sh tunnel`.
-A convenience script for this is coming soon.
+Concourse and PCF have load balancers. You can access them at the expected URIs based on your configuration.
 
 ## Getting rid of the environment
 
