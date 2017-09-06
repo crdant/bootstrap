@@ -61,22 +61,16 @@ releases () {
 }
 
 safe_auth () {
-  jq --raw-output '.auth.client_token' ${key_dir}/bootstrap-${env_id}-token.json | safe auth token
+  safe_auth_bootstrap
 }
 
 vars () {
-  admin_password="${1}"
   atc_vault_token=`jq --raw-output '.auth.client_token' ${key_dir}/atc-${env_id}-token.json`
   vault_cert_file=${key_dir}/vault-${env_id}.crt
-  safe_auth_bootstrap
-  if [ -n ${admin_password} ] ; then
-    safe set secret/bootstrap/concourse/admin value="${admin_password}"
-  fi
   concourse_password=`safe get secret/bootstrap/concourse/admin:value`
   cat <<VAR_ARGUMENTS
-    --var concourse-url="${concourse_url}" --var concourse-user=${concourse_user} --var concourse-password=${concourse_password}
-    --var-file atc-cert-file="${atc_cert_file}" --var-file atc-key-file="${atc_key_file}"
-    --var-file vault-cert-file="${vault_cert_file}" --var-file atc-vault-token="${atc_vault_token}"
+    --var concourse-url="${concourse_url}" --var concourse-user=${concourse_user} --var concourse-password=${concourse_password} --var atc-vault-token=${atc_vault_token}
+    --var-file atc-cert-file=${atc_cert_file} --var-file atc-key-file=${atc_key_file} --var-file vault-cert-file=${vault_cert_file}
 VAR_ARGUMENTS
 }
 
@@ -88,7 +82,10 @@ interpolate () {
 deploy () {
   local manifest=${manifest_dir}/concourse.yml
   admin_password=`generate_passphrase 4`
-  bosh -n -e "${env_id}" -d concourse deploy "${manifest}" `vars ${admin_password}`
+  safe_auth_bootstrap
+  safe set secret/bootstrap/concourse/admin value="${admin_password}"
+  vars
+  bosh -n -e "${env_id}" -d concourse deploy "${manifest}" `vars`
 }
 
 lbs () {
@@ -122,9 +119,15 @@ url () {
 
 teardown () {
   bosh -n -e "${env_id}" -d concourse delete-deployment
-  bbl delete-lbs
-  # TODO: clean up DNS
-  # gcloud dns managed-zones --project ${project} delete ${dns_zone}
+
+  # delete load balancer in DNS
+  local transaction_file="${workdir}/dns-transaction-${dns_zone}.xml"
+  gcloud dns record-sets --project "${project}" transaction start -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
+  lb_address=`gcloud compute --project ${project} forwarding-rules describe ${env_id}-concourse-https --region ${region} --format json | jq --raw-output '.IPAddress'`
+  gcloud dns record-sets --project ${project} transaction remove -z "${dns_zone}" --name "${concourse_host}" --ttl "${dns_ttl}" --type A "${lb_address}" --transaction-file="${transaction_file}"
+  gcloud dns record-sets --project ${project} transaction execute -z "${dns_zone}" --transaction-file="${transaction_file}"
+
+  bbl delete-lbs --gcp-service-account-key "${key_file}" --gcp-project-id "${project}"
 }
 
 if [ $# -gt 0 ]; then
