@@ -31,6 +31,10 @@ tokens () {
   vault token-create --address ${vault_addr} --ca-cert=${vault_cert_file} --format json --policy alger > "${key_dir}/bootstrap-${env_id}-token.json"
 }
 
+target_safe () {
+   safe -k target ${vault_addr} ${env_id}
+}
+
 
 if [ $# -gt 0 ]; then
   while [ $# -gt 0 ]; do
@@ -47,6 +51,9 @@ if [ $# -gt 0 ]; then
       mount )
         mount
         ;;
+      safe | target)
+        target_safe
+        ;;
       * )
         echo "Unrecognized option: $1" 1>&2
         exit 1
@@ -61,3 +68,4 @@ auth
 mount
 policies
 tokens
+safe
