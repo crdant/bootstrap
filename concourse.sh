@@ -92,7 +92,7 @@ deploy () {
 }
 
 lbs () {
-  bbl create-lbs --type concourse --key ${lb_key_file} --cert ${lb_cert_file}
+  bbl create-lbs --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" --type concourse --key ${lb_key_file} --cert ${lb_cert_file}
 }
 
 dns() {

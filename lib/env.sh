@@ -14,8 +14,8 @@ availability_zone_3="${region}-a"
 
 if [ -f "${BASEDIR}/bbl-state.json" ] ; then
   jumpbox=`bbl jumpbox-address | cut -d':' -f1 `
-  env_id=`bbl env-id`
-  short_id=`bbl env-id | sed s/bbl-env-// | cut -dt -f1`
+  env_id=`bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}"`
+  short_id=`bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" | sed s/bbl-env-// | cut -dt -f1`
 else
   env_id=`echo ${subdomain} | tr . -`
 fi

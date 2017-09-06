@@ -3,7 +3,7 @@ BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
 . ${workdir}/bbl-env.sh
 
-env_id=`bbl env-id`
+env_id=`bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}"`
 
 vault_port=8200
 vault_addr=https://localhost:${vault_port}
