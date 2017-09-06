@@ -15,7 +15,7 @@ service_accounts() {
   echo "Configuring service accounts..."
   gcloud iam service-accounts --project "${project}" create "${service_account_name}" --display-name "BOSH Boot Loader (bbl)" --no-user-output-enabled
   gcloud iam service-accounts --project "${project}" keys create "${key_file}"  --iam-account "${service_account}" --no-user-output-enabled
-  gcloud projects add-iam-policy-binding "${pbbl roject}" --member "serviceAccount:${service_account}" --role "roles/editor" --no-user-output-enabled
+  gcloud projects add-iam-policy-binding "${project}" --member "serviceAccount:${service_account}" --role "roles/editor" --no-user-output-enabled
 }
 
 director() {
