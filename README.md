@@ -32,6 +32,12 @@ A convenience script for this is coming soon.
 
 Each of the scripts has a `teardown` command-line argument (except `prepare.sh`). Run those, then run `teardown.sh`.
 
+1. Teardown PCF (`pcf.sh teardown`).
+2. Teardown LDAP (if you created it) with `ldap.sh teardown`.
+3. Take down concourse with `concourse.sh teardown`.
+4. Get rid of Vault with `vault.sh teardown`.
+5. Lastly, take down the infrastructure with `teardown.sh`.
+
 ## Ergonomics
 
 Each command has some subcommands for running a piece of what it does. More to come on that later.
