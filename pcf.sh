@@ -183,10 +183,10 @@ params() {
   ert_errands_to_disable: none
 
   # PCF Operations Manager minor version to install
-  opsman_major_minor_version: ^1\.10\..*$
+  opsman_major_minor_version: ^1\.11\.8*$
 
   # PCF Elastic Runtime minor version to install
-  ert_major_minor_version: ^1\.10\..*$
+  ert_major_minor_version: ^1\.11\..*$
 
   mysql_monitor_recipient_email: ${email} # Email address for sending mysql monitor notifications
   mysql_backups: s3   # Whether to enable MySQL backups. (disable|s3|scp)
