@@ -1,4 +1,5 @@
 account=cdantonio@pivotal.io
+email=${account}
 domain=crdant.io
 project=fe-cdantonio
 
