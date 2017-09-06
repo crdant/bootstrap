@@ -76,6 +76,7 @@ buckets () {
 
 download () {
   # TODO: Switch to Pivnet?
+  pivnet login --api-token ${PIVNET_TOKEN}
   pivnet download-product-files --product-slug pcf-automation --release-version ${pcf_pipelines_version} --download-dir ${workdir} --glob "pcf-pipelines-${pcf_pipelines_version}.tgz" --accept-eula
   tar -xzf "${workdir}/pcf-pipelines-${pcf_pipelines_version}.tgz" -C "${workdir}"
   modernize_pipeline
