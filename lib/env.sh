@@ -5,11 +5,11 @@ project=fe-cdantonio
 domain_token=`echo ${domain} | tr . -`
 subdomain="bbl.gcp.${domain}"
 
-region="us-east4"
+region="us-central1"
 storage_location="us"
-availability_zone_1="${region}-b"
+availability_zone_1="${region}-f"
 availability_zone_2="${region}-c"
-availability_zone_3="${region}-a"
+availability_zone_3="${region}-b"
 
 # TO DO: fixed up to env_id next time I tear down
 service_account_name=`echo ${subdomain} | tr . -`
@@ -29,7 +29,7 @@ else
   env_id=`echo ${subdomain} | tr . -`
 fi
 
-dns_zone="${env_id}-dns"
+dns_zone=`echo ${subdomain} | tr . -`
 dns_ttl=60
 
 if [ -f "${workdir}/bbl-env.sh" ] ; then
