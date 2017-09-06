@@ -27,7 +27,7 @@ The Vault and LDAP processes will also setup tunnels for you, so you'll be worki
 of those (8200 for Vault, 636 for LDA with SSL/TLS).  If the tunnels time out, you can recreate them with the sequence `./prepare.sh client login ; ./vault.sh tunnel ; ./ldap.sh tunnel`. *A convenience script for this is coming soon.*
 
 Concourse and PCF have load balancers. You can access them at the expected URIs based on your configuration. The PCF Pipelines are available in the
-concourse team `pcf`, with username `pivotal`. To get the password run ``
+concourse team `pcf`, with username `pivotal`. To get the password run `pcf.sh secret concourse`
 
 ## Getting rid of the environment
 
