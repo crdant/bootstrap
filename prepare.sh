@@ -3,6 +3,14 @@ BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
 set -e
 
+if [ ! -d ${workdir} ] ; then
+  mkdir -p ${workdir}
+fi
+
+if [ ! -d ${key_dir} ] ; then
+  mkdir -p ${key_dir}
+fi
+
 service_accounts() {
   echo "Configuring service accounts..."
   gcloud iam service-accounts --project "${project}" create "${service_account_name}" --display-name "BOSH Boot Loader (bbl)" --no-user-output-enabled
