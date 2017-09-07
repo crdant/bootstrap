@@ -53,6 +53,10 @@ Homebrew, so Mac users can run `brew install cloudfoundry/tap/bbl`.
 
 ## Coming soon
 
+1. Tie PCF to LDAP
+1. Windows in PCF and concourse
+1. PCF tile support
+1. Split working directory from script directory to simplify having local changes
 1. Simple script(s) to do the manual stuff more easily.
 1. Forcing and/or testing without SSH multiplexing. I use it all the time, colleagues who don't are seeing some weirdness.
 1. Making this document more readable and useful.
