@@ -25,7 +25,8 @@ manifest_dir="${BASEDIR}/manifests"
 if [ -f "${BASEDIR}/bbl-state.json" ] ; then
   jumpbox=`bbl jumpbox-address --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" | cut -d':' -f1 `
   env_id=`bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}"`
-  short_id=`bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" | sed s/bbl-env-// | cut -dt -f1`
+  # reversing the string allows us to get around a 't' being in the lake name without resorting to awk, perl, etc.
+  short_id=`bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" | sed s/bbl-env-// | rev | cut -dt -f2- | rev`
 else
   env_id=`echo ${subdomain} | tr . -`
 fi
