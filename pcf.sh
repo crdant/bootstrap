@@ -194,7 +194,7 @@ params() {
   mysql_backups_s3_access_key_id: ((gcp_storage_access_key))
   mysql_backups_s3_bucket_name: ${mysql_backup_bucket}
   mysql_backups_s3_bucket_path:
-  mysql_backups_s3_cron_schedule: ${mysql_backup_schedule}
+  mysql_backups_s3_cron_schedule: ${mysql_backup_schedule}more
   mysql_backups_s3_endpoint_url: https://storage.googleapis.com
   mysql_backups_s3_secret_access_key: ((gcp_storage_secret_key))
   mysql_backups_scp_cron_schedule:
@@ -263,6 +263,122 @@ install() {
   bootstrap_terraform
   create_infrastructure
   configure_director
+}
+
+ldap () {
+  local secret_root="concourse/${concourse_team}/${pcf_install_pipeline}"
+
+  ldap_url=`${BASEDIR}/ldap.sh url`
+  ldap_host=`echo ${ldap_url} | cut -d: -f2 | sed -e 's#//##g'`
+  ldap_cert=`cat ${key_dir}/ldap-${env_id}.crt | perl -pe 's#\n#\x5c\x5c\x6e#g'`
+
+  safe_auth_bootstrap
+  ldap_admin_password=`safe get secret/bootstrap/ldap/admin:value`
+  ldap_admin_bindDN=`${BASEDIR}/ldap.sh binddn`
+
+  domain_context=`${BASEDIR}/ldap.sh convert ${domain}`
+  pcf_bindDN="pcf_${env_id},$domain_context"
+  pcf_bind_password=`generate_passphrase 4`
+
+  safe_auth
+  safe set ${secret_root}/uaa_ldap_username value=${pcf_bindDN}
+  safe set ${secret_root}/uaa_ldap_password value=${pcf_bind_password}
+
+  pcf_bind_password_enc=`echo {SHA}$(echo -n ${pcf_bind_password} | openssl sha -sha256 -binary) | base64`
+  LDAPTLS_REQCERT=never ldapadd -H `${BASEDIR}/ldap.sh tunnel_url` -D ${ldap_admin_bindDN} -w ${ldap_admin_password} -f <(
+    cat <<LDIF
+version: 1
+
+dn: o=PCF,${domain_context}
+objectClass: top
+objectClass: organization
+o: PCF
+
+dn: ou=users,o=PCF,${domain_context}
+objectclass: organizationalUnit
+objectclass: top
+description: Contains entries which describe Cloud Foundry users
+ou: users
+
+dn: ou=systems,o=PCF,${domain_context}
+objectclass: organizationalUnit
+objectclass: top
+description: Contains entries for systems that have access to the directory
+ou: systems
+
+dn: cn=pcf_platform,ou=systems,o=PCF,${domain_context}
+objectClass: person
+objectClass: top
+cn: pcf_platform
+sn: PCF
+userPassword:: ${pcf_bind_password_enc}
+
+dn: ou=groups,o=PCF,${domain_context}
+objectclass: organizationalUnit
+objectclass: top
+description: Contains entries which describe Cloud Foundry groups
+ou: groups
+LDIF
+  )
+
+  ldap_properties=$(
+    jq -n \
+      --arg ldap_url "${ldap_url}" \
+      --arg domain_context "${domain_context}" \
+      --arg pcf_bindDN ${pcf_bindDN} \
+      --arg pcf_bind_password "${pcf_bind_password}" \
+      --arg ldap_cert "${ldap_cert}" \
+      --arg ldap_address "${ldap_host}" \
+      --arg user_search_base "ou=users,o=PCF,$domain_context" \
+      --arg group_search_base "ou=groups,o=PCF,$domain_context" \
+      '
+        {
+          ".properties.uaa": {
+            "value": "ldap"
+          },
+          ".properties.uaa.ldap.url": {
+            "value": $ldap_url
+          },
+          ".properties.uaa.ldap.credentials": {
+            "value": {
+              "identity": $pcf_bindDN,
+              "password": $pcf_bind_password
+            }
+          },
+          ".properties.uaa.ldap.search_base": {
+            "value": $user_search_base
+          },
+          ".properties.uaa.ldap.search_filter": {
+            "value": "cn={0}"
+          },
+          ".properties.uaa.ldap.group_search_base": {
+            "value": $group_search_base
+          },
+          ".properties.uaa.ldap.group_search_filter": {
+            "value": "member={0}"
+          },
+          ".properties.uaa.ldap.server_ssl_cert": {
+            "value": $ldap_cert
+          },
+          ".properties.uaa.ldap.server_ssl_cert_alias": {
+            "value": $ldap_address
+          },
+          ".properties.uaa.ldap.mail_attribute_name": {
+            "value": "mail"
+          },
+          ".properties.uaa.ldap.first_name_attribute": {
+            "value": "givenName"
+          },
+          ".properties.uaa.ldap.last_name_attribute": {
+            "value": "sn"
+          }
+        }
+      '
+  )
+
+  om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/pcf_opsman_admin_username:value` \
+      --password `safe get ${secret_root}/pcf_opsman_admin_password:value` --skip-ssl-validation \
+    configure-product --product-name cf --product-properties "$ldap_properties"
 }
 
 wipe_env() {
@@ -344,6 +460,9 @@ if [ $# -gt 0 ]; then
       dns)
         dns
         ;;
+      ldap)
+        ldap
+        ;;
       safe_auth)
         safe_auth
         ;;
@@ -381,3 +500,4 @@ secrets
 params
 pipeline
 install
+ldap
