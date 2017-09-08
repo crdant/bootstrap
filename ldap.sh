@@ -56,10 +56,15 @@ safe_auth () {
   jq --raw-output '.auth.client_token' ${key_dir}/bootstrap-${env_id}-token.json | safe auth token
 }
 
+convert_domain () {
+  local ipDomain=${1}
+  echo "dc=${ipDomain}" | sed 's/\./,dc=/g'
+}
+
 vars () {
   safe_auth
 
-  ldap_olc_suffix='cn=config,dc=crdant,dc=io'
+  ldap_olc_suffix=`convert_domain ${domain}`
   ldap_olc_root_dn="cn=admin,${ldap_olc_suffix}"
   ldap_olc_root_password=`safe get secret/bootstrap/ldap/admin:value`
 
@@ -98,6 +103,19 @@ tunnel () {
   ssh -fnNT -L 6${ldap_port}:${ldap_static_ip}:${ldap_port} jumpbox@${jumpbox} -i $BOSH_GW_PRIVATE_KEY
 }
 
+binddn () {
+  ldap_olc_suffix=`convert_domain ${domain}`
+  echo "cn=admin,${ldap_olc_suffix}"
+}
+
+url () {
+  echo "ldaps://${ldap_static_ip}:${ldap_port}"
+}
+
+tunnel_url () {
+  echo "ldaps://localhost:6${ldap_port}"
+}
+
 teardown () {
   bosh -n -e ${env_id} -d ldap delete-deployment
   gcloud --project "${project}" compute firewall-rules delete "${env_id}-ldap"
@@ -129,6 +147,23 @@ if [ $# -gt 0 ]; then
         ;;
       tunnel )
         tunnel
+        ;;
+      tunnel_url )
+        tunnel_url
+        ;;
+      url )
+        url
+        ;;
+      binddn )
+        binddn
+        ;;
+      lbs )
+        lbs
+        ;;
+      convert )
+        domain_string="${2}"
+        shift;
+        convert_domain ${domain_string}
         ;;
       teardown )
         teardown
