@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
+. "${BASEDIR}/lib/generate_passphrase.sh"
+. "${BASEDIR}/lib/secrets.sh"
 
 export account
 export domain
