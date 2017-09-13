@@ -9,6 +9,8 @@ instance_groups:
 - name: ldap
   instances: 1
   vm_type: n1-standard-1
+  vm_extensions:
+    - ldap-lb
   stemcell: trusty
   azs: [z2]
   networks: [{name: private, static_ips: ((ldap-static-ip)), default: [dns, gateway]}]

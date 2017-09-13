@@ -16,6 +16,8 @@ instance_groups:
         use_file: true
 
   vm_type:  n1-standard-1
+  vm_extensions:
+    - vault-lb
   stemcell: trusty
   azs: [z1]
   jobs:
@@ -32,6 +34,8 @@ instance_groups:
             tls:
               certificate: ((vault-cert))
               key: ((vault-key))
+        ha:
+          redirect_address: ((vault-addr))
 
 stemcells:
 - alias: trusty

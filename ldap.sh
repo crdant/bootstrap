@@ -7,6 +7,7 @@ stemcell_version=3431.13
 stemcell_checksum=8ae6d01f01f627e70e50f18177927652a99a4585
 
 ldap_release_repository=https://github.com/cloudfoundry-community/openldap-boshrelease.git
+ldap_host="ldap.${subdomain}"
 ldap_static_ip=10.0.47.195
 ldap_cert_file="${key_dir}/ldap-${env_id}.crt"
 ldap_key_file="${key_dir}/ldap-${env_id}.key"
@@ -96,7 +97,7 @@ deploy () {
 }
 
 firewall() {
-  gcloud --project "${project}" compute firewall-rules create "${env_id}-ldap" --allow="tcp:${ldap_port}" --source-tags="${env_id}-bosh-open" --target-tags="${env_id}-internal" --network="${env_id}-network "
+  gcloud --project "${project}" compute firewall-rules create "${env_id}-ldap" --allow="tcp:${ldap_port}" --source-ranges="0.0.0.0/0" --target-tags="ldap" --network="${env_id}-network "
 }
 
 tunnel () {
@@ -114,6 +115,33 @@ url () {
 
 tunnel_url () {
   echo "ldaps://localhost:6${ldap_port}"
+}
+
+lbs () {
+  echo "Creating load balancer..."
+  local address_name="${env_id}-ldap"
+  local load_balancer_name="${env_id}-ldap"
+  gcloud compute --project "${project}" addresses create "${address_name}" --region "${region}" --no-user-output-enabled
+  gcloud compute --project "${project}" target-pools create "${load_balancer_name}" --description "Target pool for load balancing LDAP access" --region "${region}" --no-user-output-enabled
+  gcloud compute --project "${project}" forwarding-rules create "${load_balancer_name}" --description "Forwarding rule for load balancing LDAP access." --region "${region}" --address "https://www.googleapis.com/compute/v1/projects/${project}/regions/${region}/addresses/${address_name}" --ip-protocol "TCP" --ports "636" --target-pool "${load_balancer_name}" --no-user-output-enabled
+  update_cloud_config
+}
+
+dns () {
+  echo "Configuring DNS..."
+  local address_name="${env_id}-ldap"
+  local address=$(gcloud compute --project ${project} addresses describe "${address_name}" --format json --region "${region}"  | jq --raw-output ".address")
+  local transaction_file="${workdir}/ldap-dns-transaction-${pcf_dns_zone}.xml"
+
+  gcloud dns record-sets transaction start -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
+  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${ldap_host}" --ttl "${dns_ttl}" --type A "${address}" --transaction-file="${transaction_file}" --no-user-output-enabled
+  gcloud dns record-sets transaction execute -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
+}
+
+update_cloud_config () {
+  bosh -e ${env_id} cloud-config |
+    bosh interpolate -o etc/add-lb.yml -v env-id="${env_id}" -v job="ldap" - |
+    bosh -n -e ${env_id} update-cloud-config -
 }
 
 teardown () {
@@ -160,6 +188,12 @@ if [ $# -gt 0 ]; then
       lbs )
         lbs
         ;;
+      cloud-config )
+        update_cloud_config
+        ;;
+      dns )
+        dns
+        ;;
       convert )
         domain_string="${2}"
         shift;
@@ -181,6 +215,7 @@ fi
 ssl_certificates
 stemcell
 releases
+lbs
 deploy
 firewall
 tunnel
