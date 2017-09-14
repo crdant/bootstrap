@@ -6,10 +6,15 @@ releases:
   version: latest
 - name: garden-runc
   version: latest
+- name: concourse-windows-worker
+  version: latest
 
 stemcells:
 - alias: trusty
   os: ubuntu-trusty
+  version: latest
+- alias: windows
+  os: windows2012R2
   version: latest
 
 instance_groups:
@@ -101,6 +106,22 @@ instance_groups:
       garden:
         listen_network: tcp
         listen_address: 0.0.0.0:7777
+
+- name: concourse_windows
+  instances: 1
+  # replace with a VM type from your BOSH Director's cloud config
+  vm_type: n1-standard-1
+  vm_extensions:
+  # replace with a VM extension from your BOSH Director's cloud config that will attach
+  # sufficient ephemeral storage to VMs in this instance group.
+  - 50GB_ephemeral_disk
+  stemcell: windows
+  azs: [z1]
+  networks: [{name: private}]
+  jobs:
+  - name: concourse_windows
+    release: concourse-windows-worker
+    properties: {}
 
 update:
   canaries: 1

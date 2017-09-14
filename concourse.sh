@@ -7,10 +7,16 @@ BASEDIR=`dirname $0`
 
 stemcell_version=3431.13
 stemcell_checksum=8ae6d01f01f627e70e50f18177927652a99a4585
+
 concourse_version=3.4.0
 concourse_checksum=e262b0fb209df6134ea15917e2b9b8bfb8d0d0d1
 garden_version=1.6.0
 garden_checksum=58fbc64aff303e6d76899441241dd5dacef50cb7
+
+windows_stemcell_version=1200.3
+windows_stemcell_checksum=1b6178873ba57e87a4cae74b9620227cc2c26518
+windows_worker_version=3.4.1
+windows_worker_checksum=5afcaa7a21be8c2837ec2b1ed9b545b6414d3722
 
 concourse_host="concourse.${subdomain}"
 concourse_url="https://${concourse_host}"
@@ -51,13 +57,15 @@ ssl_certificates () {
   openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${atc_key_file}" -out "${atc_cert_file}" -subj "${subject}" > /dev/null
 }
 
-stemcell () {
+stemcells () {
   bosh -e "${env_id}" upload-stemcell https://bosh.io/d/stemcells/bosh-google-kvm-ubuntu-trusty-go_agent?v=${stemcell_version} --sha1 ${stemcell_checksum}
+  bosh -e "${env_id}" upload-stemcell https://bosh.io/d/stemcells/bosh-google-kvm-windows2012R2-go_agent?v=${windows_stemcell_version} --sha1 ${windows_stemcell_checksum}
 }
 
 releases () {
   bosh -e "${env_id}" upload-release https://bosh.io/d/github.com/concourse/concourse?v=${concourse_version} --sha1 ${concourse_checksum}
   bosh -e "${env_id}" upload-release https://bosh.io/d/github.com/cloudfoundry/garden-runc-release?v=${garden_version} --sha1 ${garden_checksum}
+  bosh -e "${env_id}" upload-release https://bosh.io/d/github.com/pivotal-cf-experimental/concourse-windows-worker-release?v=${windows_worker_version} --sha1 ${windows_worker_checksum}
 }
 
 safe_auth () {
@@ -138,11 +146,11 @@ if [ $# -gt 0 ]; then
       security )
         ssl_certificates
         ;;
-      stemcell )
-        stemcell
+      stemcell | stemcells)
+        stemcells
         ;;
-      release )
-        release
+      release | releases)
+        releases
         ;;
       deploy )
         deploy
@@ -181,7 +189,7 @@ if [ $# -gt 0 ]; then
 fi
 
 ssl_certificates
-stemcell
+stemcells
 releases
 lbs
 deploy
