@@ -28,7 +28,7 @@ instance_groups:
   - lb
   stemcell: trusty
   azs: [z1]
-  networks: [{name: private}]
+  networks: [{name: private, static_ips: ((concourse-web-static-ip))}]
   jobs:
   - name: atc
     release: concourse
@@ -57,7 +57,6 @@ instance_groups:
           ca_cert:
             certificate: ((vault-cert-file))
           insecure_skip_verify: true
-
 
   - name: tsa
     release: concourse
@@ -105,6 +104,7 @@ instance_groups:
       tsa:
         private_key: ((linux-worker-private-key))
         public_key: ((tsa-public-key))
+        host: ((concourse-web-static-ip))
   - name: baggageclaim
     release: concourse
     properties: {}
@@ -130,8 +130,11 @@ instance_groups:
   - name: concourse_windows
     release: concourse-windows-worker
     properties:
-      tsa_worker_private_key: ((windows-worker-public-key))
+      tsa_worker_private_key: ((windows-worker-private-key))
       tsa_public_key: ((tsa-public-key))
+      tsa_host: ((concourse-web-static-ip))
+      bind_ip: 0.0.0.0
+      baggageclaim_bind_ip: 0.0.0.0
 
 update:
   canaries: 1

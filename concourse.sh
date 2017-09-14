@@ -17,9 +17,13 @@ windows_stemcell_version=1200.3
 windows_stemcell_checksum=1b6178873ba57e87a4cae74b9620227cc2c26518
 windows_worker_version=3.4.1
 windows_worker_checksum=5afcaa7a21be8c2837ec2b1ed9b545b6414d3722
+windows_utilities_release_repository=https://github.com/cloudfoundry-incubator/windows-utilities-release
+windows_utilities_version=0.3.0+dev.1
+rdp_port=3389
 
 concourse_host="concourse.${subdomain}"
 concourse_url="https://${concourse_host}"
+concourse_web_static_ip=10.0.31.198
 concourse_user=admin
 atc_key_file="${key_dir}/atc-${env_id}.key"
 atc_cert_file="${key_dir}/atc-${env_id}.crt"
@@ -72,6 +76,10 @@ releases () {
   bosh -e "${env_id}" upload-release https://bosh.io/d/github.com/concourse/concourse?v=${concourse_version} --sha1 ${concourse_checksum}
   bosh -e "${env_id}" upload-release https://bosh.io/d/github.com/cloudfoundry/garden-runc-release?v=${garden_version} --sha1 ${garden_checksum}
   bosh -e "${env_id}" upload-release https://bosh.io/d/github.com/pivotal-cf-experimental/concourse-windows-worker-release?v=${windows_worker_version} --sha1 ${windows_worker_checksum}
+  clone_windows_utilities_release
+  pushd ${workdir}/windows-utilities-release
+    bosh -n create-release && bosh -n -e ${env_id} upload-release
+  popd
 }
 
 safe_auth () {
@@ -83,13 +91,12 @@ vars () {
   vault_cert_file=${key_dir}/vault-${env_id}.crt
   concourse_password=`safe get secret/bootstrap/concourse/admin:value`
   cat <<VAR_ARGUMENTS
-    --var concourse-url="${concourse_url}" --var concourse-user=${concourse_user} --var concourse-password=${concourse_password} --var atc-vault-token=${atc_vault_token}
+    --var concourse-url="${concourse_url}" --var concourse-user=${concourse_user} --var concourse-password=${concourse_password} \
+    --var concourse-web-static-ip=${concourse_web_static_ip} --var atc-vault-token=${atc_vault_token} \
     --var-file atc-cert-file=${atc_cert_file} --var-file atc-key-file=${atc_key_file} --var-file vault-cert-file=${vault_cert_file} \
     --var-file tsa-private-key=${key_dir}/tsa-${env_id} --var-file tsa-public-key=${key_dir}/tsa-${env_id}.pub \
     --var-file linux-worker-private-key=${key_dir}/linux-worker-${env_id} --var-file linux-worker-public-key=${key_dir}/linux-worker-${env_id}.pub \
     --var-file windows-worker-private-key=${key_dir}/windows-worker-${env_id} --var-file windows-worker-public-key=${key_dir}/windows-worker-${env_id}.pub
-
-
 VAR_ARGUMENTS
 }
 
@@ -106,8 +113,48 @@ deploy () {
   bosh -n -e "${env_id}" -d concourse deploy "${manifest}" `vars`
 }
 
+firewall() {
+  gcloud --project "${project}" compute firewall-rules create "${env_id}-concourse-windows" --allow="tcp:${rdp_port}" --source-tags="${env_id}-bosh-open" --target-tags="concourse-windows" --network="${env_id}-network "
+}
+
 lbs () {
   bbl create-lbs --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" --type concourse --key ${lb_key_file} --cert ${lb_cert_file}
+}
+
+clone_windows_utilities_release () {
+  local working_directory="${workdir}/windows-utilities-release"
+  if [ ! -d ${working_directory} ] ; then
+    git clone ${windows_utilities_release_repository} ${working_directory}
+  else
+    pushd ${working_directory}
+    git pull ${windows_utilities_release_repository}
+    popd
+  fi
+}
+
+update_runtime_config () {
+  bosh -e ${env_id} runtime-config > ${workdir}/prior_runtime_config.yml
+  current_config=`cat ${workdir}/prior_runtime_config.yml`
+  safe_auth_bootstrap
+  safe set secret/bootstrap/concourse/windows value=`windows_passphrase`
+  windows_admin_password=`safe get secret/bootstrap/concourse/windows:value`
+  if [[ $? -ne 0 || "${current_config}" == "null" ]] ; then
+    bosh interpolate --var windows-utilities-version=${windows_utilities_version} --var windows-admin-password=${windows_admin_password} ${etc_dir}/windows-runtime-config.yml |
+      bosh -n -e ${env_id} update-runtime-config -
+  else
+    bosh -e ${env_id} runtime-config |
+      bosh interpolate -o ${etc_dir}/add-windows-utilities.yml --var windows-utilities-version=${windows_utilities_version} --var windows-admin-password=${windows_admin_password} - |
+      bosh -n -e ${env_id} update-runtime-config -
+  fi
+}
+
+windows_passphrase () {
+  first=`generate_passphrase 1 | sed -e s/e/3/g | sed -e s/a/4/g | sed -e s/o/0/g | sed -e s/i/1/g | sed -e s/u/9/g`
+  second=`generate_passphrase 1 | tr '[:lower:]' '[:upper:]'`
+  third=`generate_passphrase 1 | sed -e s/e/3/g | sed -e s/a/4/g | sed -e s/o/0/g | sed -e s/i/1/g | sed -e s/u/9/g`
+  fourth=`generate_passphrase 1 | tr '[:lower:]' '[:upper:]'`
+
+  echo "$first-[$second]*$third^{$fourth}"
 }
 
 dns() {
@@ -170,6 +217,9 @@ if [ $# -gt 0 ]; then
       deploy )
         deploy
         ;;
+      firewall )
+        firewall
+        ;;
       lbs )
         lbs
         ;;
@@ -186,6 +236,9 @@ if [ $# -gt 0 ]; then
         ;;
       url )
         url
+        ;;
+      runtime-config )
+        update_runtime_config
         ;;
       interpolate )
         interpolate
@@ -207,6 +260,8 @@ ssl_certificates
 stemcells
 releases
 lbs
+update_runtime_config
 deploy
+firewall
 dns
 login

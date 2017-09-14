@@ -1,0 +1,41 @@
+- type: replace
+  path: /addons/-
+  value:
+    - name: add_windows_ssh
+      jobs:
+      - name: enable_ssh
+        release: windows-utilities
+      include:
+        stemcell:
+        - os: windows2012R2
+
+- type: replace
+  path: /addons/-
+  value:
+    - name: add_windows_rdp
+      jobs:
+      - name: enable_rdp
+        release: windows-utilities
+      include:
+        stemcell:
+        - os: windows2012R2
+
+- type: replace
+  path: /addons/-
+  value:
+    - name: update_windows_password
+      jobs:
+      - name: set_password
+        release: windows-utilities
+        properties:
+          set_password:
+            password: ((windows-admin-password))
+      include:
+        stemcell:
+        - os: windows2012R2
+
+- type: replace
+  path: /releases/-
+  value:
+    - name: windows-utilities
+      version: latest
