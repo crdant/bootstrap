@@ -57,6 +57,12 @@ ssl_certificates () {
   openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${atc_key_file}" -out "${atc_cert_file}" -subj "${subject}" > /dev/null
 }
 
+ssh_keys () {
+  ssh-keygen -P "" -t rsa -f ${key_dir}/tsa-${env_id} -b 4096 -C tsa@${env_id} > /dev/null
+  ssh-keygen -P "" -t rsa -f ${key_dir}/windows-worker-${env_id} -b 4096 -C windows@${env_id} > /dev/null
+  ssh-keygen -P "" -t rsa -f ${key_dir}/linux-worker-${env_id} -b 4096 -C linux@${env_id} > /dev/null
+}
+
 stemcells () {
   bosh -e "${env_id}" upload-stemcell https://bosh.io/d/stemcells/bosh-google-kvm-ubuntu-trusty-go_agent?v=${stemcell_version} --sha1 ${stemcell_checksum}
   bosh -e "${env_id}" upload-stemcell https://bosh.io/d/stemcells/bosh-google-kvm-windows2012R2-go_agent?v=${windows_stemcell_version} --sha1 ${windows_stemcell_checksum}
@@ -78,7 +84,12 @@ vars () {
   concourse_password=`safe get secret/bootstrap/concourse/admin:value`
   cat <<VAR_ARGUMENTS
     --var concourse-url="${concourse_url}" --var concourse-user=${concourse_user} --var concourse-password=${concourse_password} --var atc-vault-token=${atc_vault_token}
-    --var-file atc-cert-file=${atc_cert_file} --var-file atc-key-file=${atc_key_file} --var-file vault-cert-file=${vault_cert_file}
+    --var-file atc-cert-file=${atc_cert_file} --var-file atc-key-file=${atc_key_file} --var-file vault-cert-file=${vault_cert_file} \
+    --var-file tsa-private-key=${key_dir}/tsa-${env_id} --var-file tsa-public-key=${key_dir}/tsa-${env_id}.pub \
+    --var-file linux-worker-private-key=${key_dir}/linux-worker-${env_id} --var-file linux-worker-public-key=${key_dir}/linux-worker-${env_id}.pub \
+    --var-file windows-worker-private-key=${key_dir}/windows-worker-${env_id} --var-file windows-worker-public-key=${key_dir}/windows-worker-${env_id}.pub
+
+
 VAR_ARGUMENTS
 }
 
@@ -143,8 +154,12 @@ if [ $# -gt 0 ]; then
       certificates )
         ssl_certificates
         ;;
+      keys )
+        ssh_keys
+        ;;
       security )
         ssl_certificates
+        ssh_keys
         ;;
       stemcell | stemcells)
         stemcells

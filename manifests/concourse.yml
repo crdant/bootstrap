@@ -61,7 +61,12 @@ instance_groups:
 
   - name: tsa
     release: concourse
-    properties: {}
+    properties:
+      authorized_keys:
+        - ((windows-worker-public-key))
+        - ((linux-worker-public-key))
+      host_key: ((tsa-private-key))
+      host_public_key: ((tsa-public-key))
 
 - name: db
   instances: 1
@@ -96,7 +101,10 @@ instance_groups:
   jobs:
   - name: groundcrew
     release: concourse
-    properties: {}
+    properties:
+      tsa:
+        private_key: ((linux-worker-private-key))
+        public_key: ((tsa-public-key))
   - name: baggageclaim
     release: concourse
     properties: {}
@@ -121,7 +129,9 @@ instance_groups:
   jobs:
   - name: concourse_windows
     release: concourse-windows-worker
-    properties: {}
+    properties:
+      tsa_worker_private_key: ((windows-worker-public-key))
+      tsa_public_key: ((tsa-public-key))
 
 update:
   canaries: 1
