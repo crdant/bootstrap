@@ -23,9 +23,9 @@ etc_dir="${BASEDIR}/etc"
 manifest_dir="${BASEDIR}/manifests"
 
 if [ -f "${BASEDIR}/bbl-state.json" ] ; then
-  jumpbox=`bbl jumpbox-address --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" | cut -d':' -f1 `
-  env_id=`bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}"`
-  short_id=`bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" | sed s/bbl-env-// | cut -dt -f1`
+  jumpbox=`bbl jumpbox-address --state-dir "${BASEDIR}" --iaas gcp --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" --gcp-region="${region}" --gcp-zone "${availability_zone_1}" | cut -d':' -f1 `
+  env_id=`bbl env-id --state-dir "${BASEDIR}" --iaas gcp --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" --gcp-region="${region}" --gcp-zone "${availability_zone_1}"`
+  short_id=`echo "${env_id}" | sed s/bbl-env-// | cut -dt -f1`
 else
   env_id=`echo ${subdomain} | tr . -`
 fi
