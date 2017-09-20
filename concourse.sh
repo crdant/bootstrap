@@ -114,7 +114,11 @@ deploy () {
 }
 
 firewall() {
-  gcloud --project "${project}" compute firewall-rules create "${env_id}-concourse-windows" --allow="tcp:${rdp_port}" --source-tags="${env_id}-bosh-open" --target-tags="concourse-windows" --network="${env_id}-network "
+  gcloud --project "${project}" compute firewall-rules create "${env_id}-windows-rdp" --allow="tcp:${rdp_port}" --source-tags="${env_id}-bosh-open" --target-tags="${env_id}-internal" --network="${env_id}-network "
+}
+
+tunnel () {
+  ssh -fnNT -L 3389:${concourse_web_static_ip}:3389 jumpbox@${jumpbox} -i $BOSH_GW_PRIVATE_KEY
 }
 
 lbs () {
@@ -219,6 +223,9 @@ if [ $# -gt 0 ]; then
         ;;
       firewall )
         firewall
+        ;;
+      tunnel )
+        tunnel
         ;;
       lbs )
         lbs
