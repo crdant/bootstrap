@@ -14,6 +14,8 @@ addons:
     jobs:
     - name: enable_rdp
       release: windows-utilities
+      properties:
+        enabled: true
     include:
       stemcell:
       - os: windows2012R2
