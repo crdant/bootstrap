@@ -142,6 +142,13 @@ teardown () {
   bbl delete-lbs --gcp-service-account-key "${key_file}" --gcp-project-id "${project}"
 }
 
+
+modernize_pipeline() {
+  local pipeline_file=${1}
+  sed -i -e 's/{{/((/g' "${pipeline_file}"
+  sed -i -e 's/}}/))/g' "${pipeline_file}"
+}
+
 if [ $# -gt 0 ]; then
   while [ $# -gt 0 ]; do
     case $1 in
@@ -185,6 +192,10 @@ if [ $# -gt 0 ]; then
         ;;
       interpolate )
         interpolate
+        ;;
+      modernize | modernize_pipeline )
+        modernize_pipeline ${2}
+        shift
         ;;
       safe_auth | auth )
         safe_auth
