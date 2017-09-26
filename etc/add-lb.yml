@@ -1,0 +1,6 @@
+- type: replace
+  path: /vm_extensions/-
+  value:
+    cloud_properties:
+      target_pool: ((env-id))-((job))
+    name: ((job))-lb
