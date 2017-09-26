@@ -100,6 +100,17 @@ init () {
   unseal
 }
 
+stop () {
+  bosh -n -e ${env_id} -d vault update-resurrection off
+  for cid in `bosh -n -e ${env_id} -d vault vms --json | jq --raw-output '.Tables[].Rows[].vm_cid'`; do
+    bosh -n -e ${env_id} -d vault delete-vm ${cid}
+  done
+}
+
+start () {
+  deploy
+  bosh -n -e ${env_id} -d vault update-resurrection on
+}
 
 teardown () {
   bosh -n -e ${env_id} -d vault delete-deployment
@@ -144,6 +155,12 @@ if [ $# -gt 0 ]; then
         ;;
       init )
         init
+        ;;
+      start )
+        start
+        ;;
+      stop )
+        stop
         ;;
       unseal )
         unseal

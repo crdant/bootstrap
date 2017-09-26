@@ -86,11 +86,8 @@ interpolate () {
 
 deploy () {
   local manifest=${manifest_dir}/ldap.yml
-  safe_auth
-  safe set secret/bootstrap/ldap/admin value=`generate_passphrase 4`
 
   vars
-
   bosh -n -e ${env_id} -d openldap deploy ${manifest} \
     --var olc-suffix="${ldap_olc_suffix}" --var olc-root-dn="${ldap_olc_root_dn}" --var olc-root-password="${ldap_olc_root_password}" --var ldap-static-ip="${ldap_static_ip}" \
     --var-file ldap-cert="${key_dir}/ldap-${env_id}.crt" --var-file ldap-key="${key_dir}/ldap-${env_id}.key"
@@ -144,8 +141,20 @@ update_cloud_config () {
     bosh -n -e ${env_id} update-cloud-config -
 }
 
+stop () {
+  bosh -n -e ${env_id} -d openldap update-resurrection off
+  for cid in `bosh -n -e ${env_id} -d openldap vms --json | jq --raw-output '.Tables[].Rows[].vm_cid'`; do
+    bosh -n -e ${env_id} -d openldap delete-vm ${cid}
+  done
+}
+
+start () {
+  deploy
+  bosh -n -e ${env_id} -d openldap update-resurrection on
+}
+
 teardown () {
-  bosh -n -e ${env_id} -d ldap delete-deployment
+  bosh -n -e ${env_id} -d openldap delete-deployment
   gcloud --project "${project}" compute firewall-rules delete "${env_id}-ldap"
 }
 
@@ -198,6 +207,12 @@ if [ $# -gt 0 ]; then
         domain_string="${2}"
         shift;
         convert_domain ${domain_string}
+        ;;
+      start )
+        start
+        ;;
+      stop )
+        stop
         ;;
       teardown )
         teardown

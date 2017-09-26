@@ -116,6 +116,19 @@ url () {
   echo ${concourse_url}
 }
 
+stop () {
+  bosh -e $env_id
+  bosh -n -e ${env_id} -d concourse update-resurrection off
+  for cid in `bosh -n -e ${env_id} -d concourse vms --json | jq --raw-output '.Tables[].Rows[].vm_cid'`; do
+    bosh -n -e ${env_id} -d concourse delete-vm ${cid}
+  done
+}
+
+start () {
+  deploy
+  bosh -n -e ${env_id} -d concourse update-resurrection on
+}
+
 teardown () {
   bosh -n -e "${env_id}" -d concourse delete-deployment
 
@@ -157,6 +170,12 @@ if [ $# -gt 0 ]; then
         ;;
       login )
         login
+        ;;
+      start )
+        start
+        ;;
+      stop )
+        stop
         ;;
       teardown )
         teardown

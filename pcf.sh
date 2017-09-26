@@ -27,6 +27,8 @@ terraform_statefile_bucket="${env_id}-bucket"
 mysql_backup_bucket=${short_id}-mysql-backups
 mysql_backup_schedule="0 0/72 * * *"
 
+secret_root="concourse/${concourse_team}/${pcf_install_pipeline}"
+
 prepare_concourse() {
   safe_auth_bootstrap
   concourse_admin="admin"
@@ -92,7 +94,6 @@ safe_auth () {
 }
 
 get_secret () {
-  local secret_root="concourse/${concourse_team}/${pcf_install_pipeline}"
   local secret="${1}"
 
   if  [ ${secret} == "concourse" ] ; then
@@ -105,8 +106,18 @@ get_secret () {
   safe get ${secret_root}/${secret}:value
 }
 
+get_credential () {
+  local product=${1}
+  local credential=${2}
+  local field=${3}
+  if [ -z "${field}" ] ; then
+    field="password"
+  fi
+  credential=$(om -k --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/pcf_opsman_admin_username:value` --password `safe get ${secret_root}/pcf_opsman_admin_password:value` --skip-ssl-validation credentials --product-name ${product} --credential-reference ${credential} --credential-field ${field})
+  echo $credential
+}
+
 secrets () {
-  local secret_root="concourse/${concourse_team}/${pcf_install_pipeline}"
   safe_auth
 
   safe set ${secret_root}/gcp_service_account_key value="$(cat ${pcf_key_file})"
@@ -265,9 +276,11 @@ install() {
   configure_director
 }
 
-ldap () {
-  local secret_root="concourse/${concourse_team}/${pcf_install_pipeline}"
+firewall() {
+  gcloud --project "${project}" compute firewall-rules create "pcf-${short_id}-allow-om-ssh" --allow="tcp:22" --source-ranges="0.0.0.0/0" --target-tags="pcf-${short_id}-opsman" --network="pcf-${short_id}-virt-net"
+}
 
+ldap () {
   ldap_url=`${BASEDIR}/ldap.sh url`
   ldap_host=`echo ${ldap_url} | cut -d: -f2 | sed -e 's#//##g'`
   ldap_cert=`cat ${key_dir}/ldap-${env_id}.crt | perl -pe 's#\n#\x5c\x5c\x6e#g'`
@@ -386,6 +399,52 @@ wipe_env() {
   fly --target ${concourse_target} watch -j ${pcf_install_pipeline}/wipe-env
 }
 
+
+start () {
+  director_properties="$(om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/pcf_opsman_admin_username:value` --password `safe get ${secret_root}/pcf_opsman_admin_password:value` --skip-ssl-validation curl --silent --path /api/v0/deployed/director/manifest | jq --raw-output '.jobs[].properties.director' )"
+  director_ip="$(echo $director_properties | jq --raw-output .address)"
+  opsman_exec "$(cat <<START_COMMAND
+    bosh2 alias-env ${env_id} -e ${director_ip} --ca-cert /var/tempest/workspaces/default/root_ca_certificate
+    for deployment in `bosh2 -n -e ${env_id} -d vault vms --json | jq --raw-output '.Tables[].Rows[].vm_cid'`; do
+    for cid in `bosh2 -n -e ${env_id} -d vault vms --json | jq --raw-output '.Tables[].Rows[].vm_cid'`; do
+      bosh2 -n -e ${env_id} -d vault delete-vm ${cid}
+    done
+    bosh2 -n -e ${env_id} -d vault update-resurrection on
+START_COMMAND
+  )"
+}
+
+stop () {
+  director_properties="$(om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/pcf_opsman_admin_username:value` --password `safe get ${secret_root}/pcf_opsman_admin_password:value` --skip-ssl-validation curl --silent --path /api/v0/deployed/director/manifest | jq --raw-output '.jobs[].properties.director' )"
+  director_ip="$(echo $director_properties | jq --raw-output .address)"
+  director_username=`get_credential p-bosh .director.uaa_bosh_client_credentials identity`
+  director_password=`get_credential p-bosh .director.uaa_bosh_client_credentials`
+
+  vms=`opsman_exec "$(cat <<STOP_COMMAND
+    bosh2 -e ${director_ip} --ca-cert /var/tempest/workspaces/default/root_ca_certificate alias-env ${env_id}
+    export BOSH_CLIENT=${director_username}
+    export BOSH_CLIENT_SECRET=${director_password}
+    bosh2 -e ${env_id} log-in
+    bosh2 -n -e ${env_id} -d vault update-resurrection off
+    bosh2 -n -e ${env_id} -d vault vms --json
+STOP_COMMAND
+    )"`
+    echo $vms
+    # for cid in \$(| jq --raw-output '.Tables[].Rows[].vm_cid'); do
+    #   echo bosh2 -n -e ${env_id} -d vault delete-vm ${cid}
+    # done
+}
+
+opsman_exec () {
+  gcloud compute ssh --project ${project} "ubuntu@pcf-${short_id}-ops-manager" --zone ${availability_zone_1} --command "${1}"
+}
+
+exec_om () {
+  safe_auth
+  exec om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/pcf_opsman_admin_username:value` \
+      --password `safe get ${secret_root}/pcf_opsman_admin_password:value` --skip-ssl-validation $@
+}
+
 teardown() {
   wipe_env
   fly --target ${concourse_target} destroy-pipeline -p "${pcf_install_pipeline}"
@@ -442,6 +501,9 @@ if [ $# -gt 0 ]; then
         pipeline
         install
         ;;
+      firewall)
+        firewall
+        ;;
       modernize_pipeline | modernize)
         modernize_pipeline
         ;;
@@ -451,7 +513,7 @@ if [ $# -gt 0 ]; then
       create_infrastructure | infrastructure)
         create_infrastructure
         ;;
-      configure_director | director | opsman | om)
+      configure_director | director | opsman)
         configure_director
         ;;
       wipe_env | wipe)
@@ -470,6 +532,10 @@ if [ $# -gt 0 ]; then
         get_secret "${2}"
         shift
         ;;
+      get_credential | credential)
+        get_credential "${2}" "${3}"
+        shift
+        ;;
       trigger)
         trigger "${2}"
         shift
@@ -478,8 +544,24 @@ if [ $# -gt 0 ]; then
         hijack "${2}"
         shift
         ;;
+      start )
+        start
+        ;;
+      stop )
+        stop
+        ;;
       teardown)
         teardown
+        ;;
+      om)
+        shift
+        exec_om $@
+        exit
+        ;;
+      exec)
+        shift
+        opsman_exec $@
+        exit
         ;;
       * )
         echo "Unrecognized option: $1" 1>&2
