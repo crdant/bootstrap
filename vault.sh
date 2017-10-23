@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
-. ${workdir}/bbl-env.sh
+. "${BASEDIR}/lib/certificates.sh"
 
 env_id=`bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}"`
 stemcell_version=3431.13
@@ -14,8 +14,8 @@ vault_static_ip=10.0.31.195
 vault_port=8200
 vault_addr=https://${vault_host}:${vault_port}
 
-export vault_cert_file=${key_dir}/vault-${env_id}.crt
-export vault_key_file=${key_dir}/vault-${env_id}.key
+export vault_cert_file=${ca_dir}/${vault_host}.crt
+export vault_key_file=${ca_dir}/${vault_host}.key
 
 ssl_certificates () {
   echo "Creating SSL certificate..."
@@ -46,6 +46,7 @@ lbs () {
   gcloud compute --project "${project}" addresses create "${address_name}" --region "${region}" --no-user-output-enabled
   gcloud compute --project "${project}" target-pools create "${load_balancer_name}" --description "Target pool for load balancing Vault access" --region "${region}" --no-user-output-enabled
   gcloud compute --project "${project}" forwarding-rules create "${load_balancer_name}" --description "Forwarding rule for load balancing Vault access." --region "${region}" --address "https://www.googleapis.com/compute/v1/projects/${project}/regions/${region}/addresses/${address_name}" --ip-protocol "TCP" --ports "8200" --target-pool "${load_balancer_name}" --no-user-output-enabled
+  update_cloud_config
 }
 
 dns () {
@@ -73,10 +74,6 @@ deploy () {
 
 firewall() {
   gcloud --project "${project}" compute firewall-rules create "${env_id}-vault" --allow="tcp:${vault_port}"  --source-ranges="0.0.0.0/0" --target-tags="vault" --network="${env_id}-network "
-}
-
-tunnel () {
-  ssh -fnNT -L 8200:${vault_static_ip}:8200 jumpbox@${jumpbox} -i $BOSH_GW_PRIVATE_KEY
 }
 
 unseal() {
@@ -134,7 +131,7 @@ if [ $# -gt 0 ]; then
       dns )
         dns
         ;;
-      cloud-config )
+      cloud_config )
         update_cloud_config
         ;;
       deploy )
@@ -175,7 +172,7 @@ ssl_certificates
 stemcell
 releases
 lbs
+dns
 deploy
 firewall
-tunnel
 init

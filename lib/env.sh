@@ -25,6 +25,7 @@ manifest_dir="${BASEDIR}/manifests"
 # CA configuration
 ca_dir=${key_dir}/CA
 ca_name="${domain} Certificate Authority"
+ca_cert_file=${ca_dir}/`echo ${ca_name} | tr ' ' '_'`.crt
 country="US"
 state="MA"
 city="Cambridge"

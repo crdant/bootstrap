@@ -2,8 +2,8 @@ create_certificate () {
   local common_name=${1}
   local org_unit=${2}
 
-  request ${common_name} ${org_unit}
-  sign ${common_name}
+  request_certificate ${common_name} ${org_unit}
+  sign_certificate ${common_name}
 }
 
 request_certificate () {
@@ -31,14 +31,12 @@ request_certificate () {
     done
   fi
 
-  local domains=${3}
-
-  certstrap --depot_path ${ca_dir} request-cert --common-name ${common_name} ${address_args} \
+  certstrap --depot-path ${ca_dir} request-cert --common-name ${common_name} ${address_args} \
     --country ${country} --province ${state} --locality ${city} \
     --organization ${organization} --organizational-unit ${org_unit}
 }
 
 sign_certificate () {
   local common_name=${1}
-  certstrap --depot_path ${ca_dir} sign ${common_name} --CA ${ca_name}
+  certstrap --depot-path ${ca_dir} sign ${common_name} --CA "${ca_name}"
 }

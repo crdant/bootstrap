@@ -19,7 +19,7 @@ service_accounts() {
 }
 
 ca () {
-  certstrap --depot-path ${ca_dir} init --common-name ${ca_name}
+  certstrap --depot-path "${ca_dir}" init --common-name "${ca_name}"
 }
 
 director() {
@@ -70,6 +70,10 @@ login() {
   bosh log-in -e `bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}"` --client="${BOSH_CLIENT}" --client-secret="${BOSH_CLIENT_SECRET}"
 }
 
+trust () {
+  security add-trusted-cert -d -p ssl -k ${HOME}/Library/Keychains/login.keychain ${ca_cert_file}
+}
+
 if [ $# -gt 0 ]; then
   while [ $# -gt 0 ]; do
     case $1 in
@@ -92,7 +96,10 @@ if [ $# -gt 0 ]; then
         client
         ;;
       login )
-          login
+        login
+        ;;
+      trust )
+        trust
         ;;
       * )
         echo "Unrecognized option: $1" 1>&2
@@ -110,3 +117,4 @@ director
 dns
 client
 login
+trust
