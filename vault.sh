@@ -21,7 +21,7 @@ ssl_certificates () {
   echo "Creating SSL certificate..."
 
   common_name="${vault_host}"
-  org_unit="Vault"
+  org_unit="${env_id} Secrets Management"
 
   create_certificate ${common_name} ${org_unit} --domains "${vault_host}" --ips ${vault_static_ip}
 }

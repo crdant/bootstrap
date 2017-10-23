@@ -15,28 +15,27 @@ garden_checksum=58fbc64aff303e6d76899441241dd5dacef50cb7
 concourse_host="concourse.${subdomain}"
 concourse_url="https://${concourse_host}"
 concourse_user=admin
-atc_key_file="${key_dir}/atc-${env_id}.key"
-atc_cert_file="${key_dir}/atc-${env_id}.crt"
 
 ssl_certificates () {
-  lb_key_file="${key_dir}/web-${env_id}.key"
-  lb_cert_file="${key_dir}/web-${env_id}.crt"
-
   echo "Creating SSL certificate for load balancers..."
 
   common_name="*.${subdomain}"
   org_unit="Continuous Delivery"
 
   create_certificate ${common_name} ${org_unit}
+  lb_key_file="${ca_dir}/${common_name}.key"
+  lb_cert_file="${ca_dir}/${common_name}.crt"
 
-  echo "SSL certificate for load balanacers created and stored at ${key_dir}/${env_id}.crt, private key stored at ${key_dir}/${env_id}.key."
+  echo "SSL certificate for load balanacers created and stored at ${ca_dir}/${common_name}.crt, private key stored at ${ca_dir}/${common_name}.key."
 
   echo "Creating SSL certificate for ATC..."
 
   common_name="*.${subdomain}"
-  org_unit="Continuous Delivery"
+  org_unit="${env_id} Continuous Delivery"
 
   create_certificate ${common_name} ${org_unit}
+
+  echo "SSL certificate for ATC created and stored at ${ca_dir}/${common_name}.crt, private key stored at ${ca_dir}/${common_name}.key."
 }
 
 stemcell () {
@@ -54,11 +53,11 @@ safe_auth () {
 
 vars () {
   atc_vault_token=`jq --raw-output '.auth.client_token' ${key_dir}/atc-${env_id}-token.json`
-  vault_cert_file=${key_dir}/vault-${env_id}.crt
+  vault_cert_file=${ca_dir}/vault.${subdomain}.crt
   concourse_password=`safe get secret/bootstrap/concourse/admin:value`
   cat <<VAR_ARGUMENTS
     --var concourse-url="${concourse_url}" --var concourse-user=${concourse_user} --var concourse-password=${concourse_password} --var atc-vault-token=${atc_vault_token}
-    --var-file atc-cert-file=${atc_cert_file} --var-file atc-key-file=${atc_key_file} --var-file vault-cert-file=${vault_cert_file}
+    --var-file atc-cert-file=${atc_cert_file} --var-file atc-key-file="${ca_dir}/${common_name}.key" --var-file vault-cert-file=${vault_cert_file}
 VAR_ARGUMENTS
 }
 

@@ -117,6 +117,15 @@ get_credential () {
   echo $credential
 }
 
+ssl_certificates () {
+  echo "Creating SSL certificate for ERT..."
+
+  common_name="${pcf_subdomain}"
+  org_unit="Continuous Delivery"
+
+  echo "SSL certificate for ERT created and stored at ${ca_dir}/${common_name}.crt, private key stored at ${ca_dir}/${common_name}.key."
+}
+
 secrets () {
   safe_auth
 
@@ -129,6 +138,14 @@ secrets () {
   safe set ${secret_root}/pivnet_token value=${PIVNET_TOKEN}
   safe set ${secret_root}/pcf_opsman_admin_username value=admin
   safe gen ${secret_root}/pcf_opsman_admin_password value
+
+  # store the certificates we generated
+  create_certificate ${pcf_subdomain} "${env-id} Cloud Foundry" \
+    --domains "*.cfapps.${pcf_subdomain},*.login.sys.${pcf_subdomain},*.uaa.sys.${pcf_subdomain},*.sys.${pcf_subdomain}"
+
+  safe set ${secret_root}/pcf_opsman_trusted_certs ${ca_dir}/${ca_name}.crt
+  safe set ${secret_root}/pcf_ert_ssl_cert ${ca_dir}/${pcf_subdomain}.crt
+  safe set ${secret_root}/pcf_ert_ssl_key ${ca_dir}/${pcf_subdomain}.key
 
   # Usernames must be 16 characters or fewer
   safe set ${secret_root}/db_diego_username value=pcf-diego
@@ -179,14 +196,6 @@ params() {
   gcp_storage_bucket_location: ${storage_location}
 
   terraform_statefile_bucket: ${terraform_statefile_bucket}
-
-  # Operations Manager Trusted Certificates
-  pcf_opsman_trusted_certs: |
-
-  # Elastic Runtime SSL configuration
-  # Set pcf_ert_ssl_cert to 'generate' if you'd like a self-signed cert to be made
-  pcf_ert_ssl_cert: generate
-  pcf_ert_ssl_key:
 
   # Elastic Runtime Domain
   pcf_ert_domain: ${pcf_subdomain} # This is the domain you will access ERT with

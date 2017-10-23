@@ -9,8 +9,8 @@ stemcell_checksum=8ae6d01f01f627e70e50f18177927652a99a4585
 ldap_release_repository=https://github.com/cloudfoundry-community/openldap-boshrelease.git
 ldap_host="ldap.${subdomain}"
 ldap_static_ip=10.0.47.195
-ldap_cert_file="${key_dir}/ldap-${env_id}.crt"
-ldap_key_file="${key_dir}/ldap-${env_id}.key"
+ldap_cert_file="${ca_dir}/ldap.${subdomain}.crt"
+ldap_key_file="${ca_dir}/ldap.${subdomain}.key"
 
 # ldap_static_ip=10.244.0.2
 ldap_port=636
@@ -19,16 +19,9 @@ ssl_certificates () {
   echo "Creating SSL certificate..."
 
   common_name="ldap.${subdomain}"
-  country="US"
-  state="MA"
-  city="Cambridge"
-  organization="${domain}"
-  org_unit="LDAP"
-  email="${account}"
-  alt_names="IP:${ldap_static_ip},DNS:localhost,IP:127.0.0.1"
-  subject="/C=${country}/ST=${state}/L=${city}/O=${organization}/OU=${org_unit}/CN=${common_name}/emailAddress=${email}"
+  org_unit="${env_id} Directory Services"
 
-  openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${ldap_key_file}" -out "${ldap_cert_file}" -subj "${subject}" -reqexts SAN -extensions SAN -config <(cat /etc/ssl/openssl.cnf <(printf "\n[SAN]\nsubjectAltName=${alt_names}\n"))  > /dev/null
+  create_certificate ${common_name} ${org_unit} --ips ${ldap_static_ip}
 }
 
 stemcell () {
