@@ -6,8 +6,8 @@ BASEDIR=`dirname $0`
 env_id=`bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}"`
 
 vault_port=8200
-vault_addr=https://localhost:${vault_port}
-vault_cert_file=${key_dir}/vault-${env_id}.crt
+vault_addr=https://vault.${subdomain}:${vault_port}
+vault_cert_file=${ca_dir}/vault.${subdomain}.crt
 
 set -e
 
@@ -32,7 +32,7 @@ tokens () {
 }
 
 target_safe () {
-   safe -k target ${vault_addr} ${env_id}
+   safe target -k ${vault_addr} ${env_id}
 }
 
 
