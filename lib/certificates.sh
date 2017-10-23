@@ -33,12 +33,12 @@ request_certificate () {
 
   local domains=${3}
 
-  certstrap request-cert --depot_path ${ca_dir} --common-name ${common_name} ${address_args} \
+  certstrap --depot_path ${ca_dir} request-cert --common-name ${common_name} ${address_args} \
     --country ${country} --province ${state} --locality ${city} \
     --organization ${organization} --organizational-unit ${org_unit}
 }
 
 sign_certificate () {
   local common_name=${1}
-  certstrap sign --depot_path ${ca_dir} ${common_name} --CA ${ca_name}
+  certstrap --depot_path ${ca_dir} sign ${common_name} --CA ${ca_name}
 }
