@@ -23,7 +23,7 @@ etc_dir="${BASEDIR}/etc"
 manifest_dir="${BASEDIR}/manifests"
 
 # CA configuration
-ca_dir=${key_dir}/certs
+ca_dir=${key_dir}/CA
 ca_name="${domain} Certificate Authority"
 country="US"
 state="MA"
