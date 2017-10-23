@@ -4,11 +4,12 @@ BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
 . "${BASEDIR}/lib/generate_passphrase.sh"
 . "${BASEDIR}/lib/secrets.sh"
+. "${BASEDIR}/lib/certificates.sh"
 
 stemcell_version=3431.13
 stemcell_checksum=8ae6d01f01f627e70e50f18177927652a99a4585
-concourse_version=3.4.0
-concourse_checksum=e262b0fb209df6134ea15917e2b9b8bfb8d0d0d1
+concourse_version=3.5.0
+concourse_checksum=65a974b3831bb9908661a5ffffbe456e10185149
 garden_version=1.6.0
 garden_checksum=58fbc64aff303e6d76899441241dd5dacef50cb7
 
@@ -16,26 +17,17 @@ concourse_host="concourse.${subdomain}"
 concourse_url="https://${concourse_host}"
 concourse_user=admin
 
+concourse_cert_cn="${concourse_host}"
+concourse_key_file="${ca_dir}/${concourse_host}.key"
+concourse_cert_file="${ca_dir}/${concourse_host}.crt"
+
 ssl_certificates () {
-  echo "Creating SSL certificate for load balancers..."
+  echo "Creating SSL certificate..."
 
-  common_name="*.${subdomain}"
   org_unit="Continuous Delivery"
-
-  create_certificate ${common_name} ${org_unit}
-  lb_key_file="${ca_dir}/${common_name}.key"
-  lb_cert_file="${ca_dir}/${common_name}.crt"
-
-  echo "SSL certificate for load balanacers created and stored at ${ca_dir}/${common_name}.crt, private key stored at ${ca_dir}/${common_name}.key."
-
-  echo "Creating SSL certificate for ATC..."
-
-  common_name="*.${subdomain}"
-  org_unit="${env_id} Continuous Delivery"
-
   create_certificate ${common_name} ${org_unit}
 
-  echo "SSL certificate for ATC created and stored at ${ca_dir}/${common_name}.crt, private key stored at ${ca_dir}/${common_name}.key."
+  echo "SSL certificate created and stored at ${ca_dir}/${common_name}.crt, private key stored at ${ca_dir}/${common_name}.key."
 }
 
 stemcell () {
@@ -57,7 +49,7 @@ vars () {
   concourse_password=`safe get secret/bootstrap/concourse/admin:value`
   cat <<VAR_ARGUMENTS
     --var concourse-url="${concourse_url}" --var concourse-user=${concourse_user} --var concourse-password=${concourse_password} --var atc-vault-token=${atc_vault_token}
-    --var-file atc-cert-file=${atc_cert_file} --var-file atc-key-file="${ca_dir}/${common_name}.key" --var-file vault-cert-file=${vault_cert_file}
+    --var-file atc-cert-file=${concourse_cert_file} --var-file atc-key-file=${concourse_key_file} --var-file vault-cert-file=${vault_cert_file}
 VAR_ARGUMENTS
 }
 
@@ -81,7 +73,7 @@ lbs () {
 dns() {
   echo "Setting up DNS..."
 
-  local transaction_file="${workdir}/dns-transaction-${dns_zone}.xml"
+  local transaction_file="${workdir}/concourse-dns-transaction-${dns_zone}.xml"
 
   gcloud dns record-sets --project "${project}" transaction start -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
 
@@ -96,7 +88,7 @@ dns() {
 login () {
   jq --raw-output '.auth.client_token' ${key_dir}/bootstrap-${env_id}-token.json | safe auth token
   concourse_password=`safe get secret/bootstrap/concourse/admin:value`
-  fly --target ${env_id} login --team-name main --ca-cert ${key_dir}/atc-${env_id}.crt --concourse-url=${concourse_url} --username=${concourse_user} --password=${concourse_password}
+  fly --target ${env_id} login --team-name main --ca-cert ${ca_cert_file} --concourse-url=${concourse_url} --username=${concourse_user} --password=${concourse_password}
 }
 
 url () {
@@ -152,6 +144,11 @@ if [ $# -gt 0 ]; then
         release
         ;;
       deploy )
+        deploy
+        ;;
+      upgrade )
+        stemcell
+        releases
         deploy
         ;;
       lbs )
