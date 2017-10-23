@@ -50,10 +50,12 @@ Homebrew, so Mac users can run `brew install cloudfoundry/tap/bbl`.
 2. [Safe](https://github.com/starkandwayne/safe). On a Mac you can run `brew install starkandwayne/cf/safe`.
 3. Hashicorp [Vault CLI](https://www.vaultproject.io). If you're on a Mac run `brew install vault`.
 4. The [Pivotal Network](https://network.pivotal.io) CLI, [`pivnet`](https://github.com/pivotal-cf/pivnet-cli). Again, with Homebrew `brew install pivotal/tap/pivotal-cli`.
+5. [Certstrap](https://github.com/square/certstrap) to bootstrap a CA. Install with `brew install certstrap`.
 
 ## Coming soon
 
 1. Tie PCF to LDAP
+1. Credhub instead of Vault.
 1. Windows in PCF and concourse
 1. PCF tile support
 1. Split working directory from script directory to simplify having local changes
@@ -63,3 +65,4 @@ Homebrew, so Mac users can run `brew install cloudfoundry/tap/bbl`.
 1. Making vault highly available.
 1. Making LDAP highly available.
 1. Other IaaSes.
+1. Rewrite in a programming language for better modularity and invocation across modules
