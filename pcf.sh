@@ -12,7 +12,7 @@ pcf_concourse_user=pivotal
 pcf_install_pipeline="deploy-pcf"
 pcf_pipelines_remote="https://github.com/pivotal-cf/pcf-pipelines.git"
 pcf_pipelines_local=${workdir}/pcf-pipelines
-pcf_pipelines_version="v0.16.0"
+pcf_pipelines_version="v0.19.0"
 pipeline_file="${workdir}/pcf-pipelines/install-pcf/gcp/pipeline.yml"
 parameter_file="${workdir}/${env_id}-${pcf_install_pipeline}-params.yml"
 
@@ -255,14 +255,14 @@ dns () {
   local name_servers=( `gcloud dns managed-zones describe "${pcf_dns_zone}" --format json | jq -r  '.nameServers | join(" ")'` )
   local transaction_file="${WORKDIR}/pcf-dns-transaction-${pcf_dns_zone}.xml"
 
-  gcloud dns record-sets transaction start -z "${pcf_dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
+  gcloud dns record-sets transaction start -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
 
-  gcloud dns record-sets transaction add -z "${pcf_dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[0]}" --transaction-file="${transaction_file}" --no-user-output-enabled
-  gcloud dns record-sets transaction add -z "${pcf_dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[1]}" --transaction-file="${transaction_file}" --no-user-output-enabled
-  gcloud dns record-sets transaction add -z "${pcf_dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[2]}" --transaction-file="${transaction_file}" --no-user-output-enabled
-  gcloud dns record-sets transaction add -z "${pcf_dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[3]}" --transaction-file="${transaction_file}" --no-user-output-enabled
+  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[0]}" --transaction-file="${transaction_file}" --no-user-output-enabled
+  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[1]}" --transaction-file="${transaction_file}" --no-user-output-enabled
+  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[2]}" --transaction-file="${transaction_file}" --no-user-output-enabled
+  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[3]}" --transaction-file="${transaction_file}" --no-user-output-enabled
 
-  gcloud dns record-sets transaction execute -z "${pcf_dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
+  gcloud dns record-sets transaction execute -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
 }
 
 configure_director() {
@@ -533,8 +533,8 @@ if [ $# -gt 0 ]; then
         shift
         ;;
       get_credential | credential)
-        get_credential "${2}" "${3}"
-        shift
+        get_credential "${2}" "${3}" "${4}"
+        shift 3
         ;;
       trigger)
         trigger "${2}"
