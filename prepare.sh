@@ -19,12 +19,12 @@ service_accounts() {
 }
 
 ca () {
-  certstrap init  --depot-path ${ca_dir} --common-name ${ca_name}
+  certstrap --depot-path ${ca_dir} init --common-name ${ca_name}
 }
 
 director() {
   echo "Creating the $env_id BOSH director..."
-  bbl up --iaas gcp --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" --gcp-zone "${availability_zone_1}" --gcp-region "${region}" --credhub
+  bbl up --iaas gcp --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" --gcp-zone "${availability_zone_1}" --gcp-region "${region}"
   env_id=`bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}"`
   firewall
 }
@@ -75,6 +75,9 @@ if [ $# -gt 0 ]; then
     case $1 in
       accounts )
         service_accounts
+        ;;
+      ca )
+        ca
         ;;
       dns )
         dns
