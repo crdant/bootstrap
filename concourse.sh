@@ -25,30 +25,18 @@ ssl_certificates () {
   echo "Creating SSL certificate for load balancers..."
 
   common_name="*.${subdomain}"
-  country="US"
-  state="MA"
-  city="Cambridge"
-  organization="${domain}"
   org_unit="Continuous Delivery"
-  email="${account}"
-  subject="/C=${country}/ST=${state}/L=${city}/O=${organization}/OU=${org_unit}/CN=${common_name}/emailAddress=${email}"
 
-  openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${lb_key_file}" -out "${lb_cert_file}" -subj "${subject}" > /dev/null
+  create_certificate ${common_name} ${org_unit}
 
   echo "SSL certificate for load balanacers created and stored at ${key_dir}/${env_id}.crt, private key stored at ${key_dir}/${env_id}.key."
 
   echo "Creating SSL certificate for ATC..."
 
   common_name="*.${subdomain}"
-  country="US"
-  state="MA"
-  city="Cambridge"
-  organization="${domain}"
   org_unit="Continuous Delivery"
-  email="${account}"
-  subject="/C=${country}/ST=${state}/L=${city}/O=${organization}/OU=${org_unit}/CN=${common_name}/emailAddress=${email}"
 
-  openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${atc_key_file}" -out "${atc_cert_file}" -subj "${subject}" > /dev/null
+  create_certificate ${common_name} ${org_unit}
 }
 
 stemcell () {

@@ -22,6 +22,14 @@ workdir="${BASEDIR}/work"
 etc_dir="${BASEDIR}/etc"
 manifest_dir="${BASEDIR}/manifests"
 
+# CA configuration
+ca_dir=${key_dir}/certs
+ca_name="${domain} Certificate Authority"
+country="US"
+state="MA"
+city="Cambridge"
+organization="${domain}"
+
 if [ -f "${BASEDIR}/bbl-state.json" ] ; then
   jumpbox=`bbl jumpbox-address --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" | cut -d':' -f1 `
   env_id=`bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}"`

@@ -18,6 +18,10 @@ service_accounts() {
   gcloud projects add-iam-policy-binding "${project}" --member "serviceAccount:${service_account}" --role "roles/editor" --no-user-output-enabled
 }
 
+ca () {
+  certstrap init  --depot-path ${ca_dir} --common-name ${ca_name}
+}
+
 director() {
   echo "Creating the $env_id BOSH director..."
   bbl up --iaas gcp --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" --gcp-zone "${availability_zone_1}" --gcp-region "${region}" --credhub
@@ -98,6 +102,7 @@ if [ $# -gt 0 ]; then
 fi
 
 service_accounts
+ca
 director
 dns
 client

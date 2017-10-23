@@ -21,16 +21,9 @@ ssl_certificates () {
   echo "Creating SSL certificate..."
 
   common_name="${vault_host}"
-  country="US"
-  state="MA"
-  city="Cambridge"
-  organization="${domain}"
   org_unit="Vault"
-  email="${account}"
-  alt_names="DNS:${vault_host},IP:${vault_static_ip},DNS:localhost,IP:127.0.0.1"
-  subject="/C=${country}/ST=${state}/L=${city}/O=${organization}/OU=${org_unit}/CN=${common_name}/emailAddress=${email}"
 
-  openssl req -new -newkey rsa:2048 -days 365 -nodes -sha256 -x509 -keyout "${vault_key_file}" -out "${vault_cert_file}" -subj "${subject}" -reqexts SAN -extensions SAN -config <(cat /etc/ssl/openssl.cnf <(printf "\n[SAN]\nsubjectAltName=${alt_names}\n"))  > /dev/null
+  create_certificate ${common_name} ${org_unit} --domains "${vault_host}" --ips ${vault_static_ip}
 }
 
 stemcell () {
