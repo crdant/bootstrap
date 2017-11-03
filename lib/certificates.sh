@@ -2,8 +2,8 @@ create_certificate () {
   local common_name=${1}
   local org_unit=${2}
 
-  request_certificate ${common_name} ${org_unit}
-  sign_certificate ${common_name}
+  request_certificate "${common_name}" "${org_unit}"
+  sign_certificate "${common_name}"
 }
 
 request_certificate () {
@@ -16,7 +16,7 @@ request_certificate () {
     while [ $# -gt 0 ]; do
       case $1 in
         domains )
-          address_args="${extra_args} --domain ${2}"
+          domains="${2}"
           shift
           ;;
         ip )
@@ -29,6 +29,12 @@ request_certificate () {
       esac
       shift
     done
+  fi
+
+  if [ -z "${domains}" ] ; then
+    address_args="${address_args} --domain ${common_name}"
+  else
+    address_args="${address_args} --domain ${common_name},$domains"
   fi
 
   certstrap --depot-path ${ca_dir} request-cert --common-name ${common_name} ${address_args} \
