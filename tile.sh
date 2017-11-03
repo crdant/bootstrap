@@ -11,6 +11,10 @@ concourse_url=`./concourse.sh url`
 parameter_file="${workdir}/${slug}-upgrade-params.yml"
 pipeline_file=${workdir}/pcf-pipelines/upgrade-tile/pipeline.yml
 
+
+opsman_username=$(${BASEDIR}/pcf.sh secret pcf_opsman_admin_username)
+opsman_password=$(${BASEDIR}/pcf.sh secret pcf_opsman_admin_password)
+
 download () {
   product_slug=${1}
   release_version=${2}
@@ -61,6 +65,11 @@ PARAMS
     --config ${pipeline_file} --load-vars-from ${parameter_file}
 }
 
+show_products () {
+  type=${1}
+  om -k --target opsman.${pcf_subdomain} --username ${opsman_username} --password ${opsman_password} ${type}-products
+}
+
 if [ $# -gt 0 ]; then
   while [ $# -gt 0 ]; do
     case $1 in
@@ -89,8 +98,21 @@ if [ $# -gt 0 ]; then
         ;;
       deploy )
         download=1
+        upload=1
         stage=1
         pipeline=1
+        ;;
+      staged )
+        show_products staged
+        exit
+        ;;
+      deployed | ls)
+        show_products deployed
+        exit
+        ;;
+      available | avail)
+        show_products available
+        exit
         ;;
       * )
         echo "Unrecognized option: $1" 1>&2
@@ -111,11 +133,7 @@ if [ -z "$release" ] ; then
   exit 1
 fi
 
-opsman_username=$(${BASEDIR}/pcf.sh secret pcf_opsman_admin_username)
-opsman_password=$(${BASEDIR}/pcf.sh secret pcf_opsman_admin_password)
-
 if [ -n "$download" ] ; then
-  echo "Download was $download"
   download ${slug} ${release}
 fi
 
