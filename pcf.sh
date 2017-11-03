@@ -422,37 +422,35 @@ wipe_env() {
 start () {
   director_properties="$(om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/pcf_opsman_admin_username:value` --password `safe get ${secret_root}/pcf_opsman_admin_password:value` --skip-ssl-validation curl --silent --path /api/v0/deployed/director/manifest | jq --raw-output '.jobs[].properties.director' )"
   director_ip="$(echo $director_properties | jq --raw-output .address)"
-  opsman_exec "$(cat <<START_COMMAND
-    bosh2 alias-env ${env_id} -e ${director_ip} --ca-cert /var/tempest/workspaces/default/root_ca_certificate
-    for deployment in `bosh2 -n -e ${env_id} -d vault vms --json | jq --raw-output '.Tables[].Rows[].vm_cid'`; do
-    for cid in `bosh2 -n -e ${env_id} -d vault vms --json | jq --raw-output '.Tables[].Rows[].vm_cid'`; do
-      bosh2 -n -e ${env_id} -d vault delete-vm ${cid}
+
+  cat <<STOP_COMMAND > ${workdir}/start.sh
+    bosh2 -e ${director_ip} --ca-cert /var/tempest/workspaces/default/root_ca_certificate alias-env ${env_id}
+    bosh2 -e ${env_id} log-in
+    for deployment in \$(bosh2 -n -e ${env_id} deployments --json | jq --raw-output '.Tables[].Rows[].name'); do
+      for instance in \$(bosh2 -n -e ${env_id} -d \${deployment} instances --json | jq --raw-output '.Tables[].Rows[].instance' ) ; do
+        bosh2 -n -e ${env_id} -d \${deployment} start \${instance}
+      done
+      bosh2 -n -e ${env_id} -d \${deployment} update-resurrection on
     done
-    bosh2 -n -e ${env_id} -d vault update-resurrection on
-START_COMMAND
-  )"
+STOP_COMMAND
+    gcloud compute scp ${workdir}/start.sh ubuntu@pcf-${short_id}-ops-manager: --zone ${availability_zone_1}
 }
 
 stop () {
   director_properties="$(om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/pcf_opsman_admin_username:value` --password `safe get ${secret_root}/pcf_opsman_admin_password:value` --skip-ssl-validation curl --silent --path /api/v0/deployed/director/manifest | jq --raw-output '.jobs[].properties.director' )"
   director_ip="$(echo $director_properties | jq --raw-output .address)"
-  director_username=`get_credential p-bosh .director.uaa_bosh_client_credentials identity`
-  director_password=`get_credential p-bosh .director.uaa_bosh_client_credentials`
 
-  vms=`opsman_exec "$(cat <<STOP_COMMAND
+  cat <<STOP_COMMAND > ${workdir}/stop.sh
     bosh2 -e ${director_ip} --ca-cert /var/tempest/workspaces/default/root_ca_certificate alias-env ${env_id}
-    export BOSH_CLIENT=${director_username}
-    export BOSH_CLIENT_SECRET=${director_password}
     bosh2 -e ${env_id} log-in
-    for deployment in `bosh2 -n -e ${env_id} deployments | jq --raw-output '.Tables[].Rows[].vm_cid'`; do
-      bosh2 -n -e ${env_id} -d vault update-resurrection off
-      bosh2 -n -e ${env_id} -d vault vms --json
+    for deployment in \$(bosh2 -n -e ${env_id} deployments --json | jq --raw-output '.Tables[].Rows[].name'); do
+      bosh2 -n -e ${env_id} -d \${deployment} update-resurrection off
+      for instance in \$(bosh2 -n -e ${env_id} -d \${deployment} instances --json | jq --raw-output '.Tables[].Rows[].instance' ) ; do
+        bosh2 -n -e ${env_id} -d \${deployment} stop \${instance} --hard
+      done
+    done
 STOP_COMMAND
-    )"`
-    echo $vms
-    # for cid in \$(| jq --raw-output '.Tables[].Rows[].vm_cid'); do
-    #   echo bosh2 -n -e ${env_id} -d vault delete-vm ${cid}
-    # done
+    gcloud compute scp ${workdir}/stop.sh ubuntu@pcf-${short_id}-ops-manager: --zone ${availability_zone_1}
 }
 
 opsman_exec () {
