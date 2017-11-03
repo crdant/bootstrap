@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+BASEDIR=`dirname $0`
+. "${BASEDIR}/lib/env.sh"
+. "${BASEDIR}/lib/secrets.sh"
+. "${BASEDIR}/lib/generate_passphrase.sh"
+
+pcf_subdomain=pcf.${subdomain}
+
+download () {
+  product_slug=${1}
+  release_version=${2}
+
+  mkdir -p ${workdir}/${product_slug}/${release_version}
+  pivnet download-product-files --product-slug ${product_slug} --release-version ${release_version} \
+    --glob '*google*.tgz' --download-dir=${workdir}/${product_slug}/${release_version} --accept-eula
+}
+
+upload () {
+  product_slug=${1}
+  release_version=${2}
+
+  om -k --target opsman.${pcf_subdomain} --username ${opsman_username} --password ${opsman_password} \
+    upload-stemcell --stemcell ${workdir}/${product_slug}/${release_version}/*
+}
+
+if [ $# -gt 0 ]; then
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --windows | --w)
+        windows=1
+        shift
+        ;;
+      --release | --release-version | -r)
+        release=${2}
+        shift
+        ;;
+      download)
+        download=1
+        ;;
+      upload )
+        upload=1
+        ;;
+      deploy )
+        download=1
+        upload=1
+        ;;
+      * )
+        echo "Unrecognized option: $1" 1>&2
+        exit 1
+        ;;
+    esac
+    shift
+  done
+fi
+
+slug="stemcells"
+
+if [ -n "$windows" ] ; then
+  slug="stemcells-windows-server"
+fi
+
+if [ -z "$release" ] ; then
+  echo "Version not specified. Please provide the argument '-r, --release-version' with the version you want"
+  exit 1
+fi
+
+opsman_username=$(${BASEDIR}/pcf.sh secret pcf_opsman_admin_username)
+opsman_password=$(${BASEDIR}/pcf.sh secret pcf_opsman_admin_password)
+
+if [ -n "$download" ] ; then
+  download ${slug} ${release}
+fi
+
+if [ -n "$upload" ] ; then
+  upload ${slug} ${release}
+fi
