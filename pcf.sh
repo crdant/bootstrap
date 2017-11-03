@@ -3,6 +3,7 @@ BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
 . "${BASEDIR}/lib/secrets.sh"
 . "${BASEDIR}/lib/generate_passphrase.sh"
+. "${BASEDIR}/lib/certificates.sh"
 
 concourse_team=pcf
 concourse_target=${env_id}-${concourse_team}
@@ -33,7 +34,7 @@ prepare_concourse() {
   safe_auth_bootstrap
   concourse_admin="admin"
   admin_password=`safe get secret/bootstrap/concourse/${concourse_admin}:value`
-  fly --target ${env_id} login --team-name main --ca-cert ${key_dir}/atc-${env_id}.crt --concourse-url=${concourse_url} --username=${concourse_admin} --password=${admin_password}
+  fly --target ${env_id} login --team-name main --ca-cert ${ca_cert_file} --concourse-url=${concourse_url} --username=${concourse_admin} --password=${admin_password}
   fly --target ${env_id} sync
 
   safe set secret/bootstrap/concourse/${pcf_concourse_user} value=`generate_passphrase 4`
@@ -44,7 +45,7 @@ prepare_concourse() {
 concourse_login() {
   safe_auth_bootstrap
   pcf_concourse_password=`safe get secret/bootstrap/concourse/pivotal:value`
-  fly --target ${concourse_target} login --team-name ${concourse_team} --ca-cert ${key_dir}/atc-${env_id}.crt --concourse-url=${concourse_url} --username=${pcf_concourse_user} --password=${pcf_concourse_password}
+  fly --target ${concourse_target} login --team-name ${concourse_team} --ca-cert ${ca_cert_file} --concourse-url=${concourse_url} --username=${pcf_concourse_user} --password=${pcf_concourse_password}
 }
 
 service_accounts () {
@@ -143,9 +144,9 @@ secrets () {
   create_certificate ${pcf_subdomain} "${env-id} Cloud Foundry" \
     --domains "*.cfapps.${pcf_subdomain},*.login.sys.${pcf_subdomain},*.uaa.sys.${pcf_subdomain},*.sys.${pcf_subdomain}"
 
-  safe set ${secret_root}/pcf_opsman_trusted_certs ${ca_dir}/${ca_name}.crt
-  safe set ${secret_root}/pcf_ert_ssl_cert ${ca_dir}/${pcf_subdomain}.crt
-  safe set ${secret_root}/pcf_ert_ssl_key ${ca_dir}/${pcf_subdomain}.key
+  safe set ${secret_root}/pcf_opsman_trusted_certs value="$(cat ${ca_cert_file})"
+  safe set ${secret_root}/pcf_ert_ssl_cert value="$(cat ${ca_dir}/${pcf_subdomain}.crt)"
+  safe set ${secret_root}/pcf_ert_ssl_key value="$(cat ${ca_dir}/${pcf_subdomain}.key)"
 
   # Usernames must be 16 characters or fewer
   safe set ${secret_root}/db_diego_username value=pcf-diego
@@ -204,10 +205,19 @@ params() {
   ert_errands_to_disable: none
 
   # PCF Operations Manager minor version to install
-  opsman_major_minor_version: ^1\.11\.8*$
+  opsman_major_minor_version: ^1\.12\..*$
 
   # PCF Elastic Runtime minor version to install
-  ert_major_minor_version: ^1\.11\..*$
+  ert_major_minor_version: ^1\.12\..*$
+
+  # configure routing
+  router_tls_ciphers: ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384
+  routing_disable_http: true
+
+  # not using HA proxy, but need to have values for the pipeline to work
+  haproxy_backend_ca:
+  haproxy_forward_tls:
+  haproxy_tls_ciphers:
 
   mysql_monitor_recipient_email: ${email} # Email address for sending mysql monitor notifications
   mysql_backups: s3   # Whether to enable MySQL backups. (disable|s3|scp)
@@ -434,8 +444,9 @@ stop () {
     export BOSH_CLIENT=${director_username}
     export BOSH_CLIENT_SECRET=${director_password}
     bosh2 -e ${env_id} log-in
-    bosh2 -n -e ${env_id} -d vault update-resurrection off
-    bosh2 -n -e ${env_id} -d vault vms --json
+    for deployment in `bosh2 -n -e ${env_id} deployments | jq --raw-output '.Tables[].Rows[].vm_cid'`; do
+      bosh2 -n -e ${env_id} -d vault update-resurrection off
+      bosh2 -n -e ${env_id} -d vault vms --json
 STOP_COMMAND
     )"`
     echo $vms
@@ -582,7 +593,7 @@ if [ $# -gt 0 ]; then
   exit
 fi
 
-accounts
+service_accounts
 prepare_concourse
 concourse_login
 buckets
