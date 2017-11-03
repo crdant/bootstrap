@@ -2,6 +2,7 @@
 BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
 . "${BASEDIR}/lib/generate_passphrase.sh"
+. "${BASEDIR}/lib/certificates.sh"
 
 stemcell_version=3431.13
 stemcell_checksum=8ae6d01f01f627e70e50f18177927652a99a4585
@@ -9,8 +10,8 @@ stemcell_checksum=8ae6d01f01f627e70e50f18177927652a99a4585
 ldap_release_repository=https://github.com/cloudfoundry-community/openldap-boshrelease.git
 ldap_host="ldap.${subdomain}"
 ldap_static_ip=10.0.47.195
-ldap_cert_file="${ca_dir}/ldap.${subdomain}.crt"
-ldap_key_file="${ca_dir}/ldap.${subdomain}.key"
+ldap_cert_file="${ca_dir}/${ldap_host}.crt"
+ldap_key_file="${ca_dir}/${ldap_host}.key"
 
 # ldap_static_ip=10.244.0.2
 ldap_port=636
@@ -18,7 +19,7 @@ ldap_port=636
 ssl_certificates () {
   echo "Creating SSL certificate..."
 
-  common_name="ldap.${subdomain}"
+  common_name="${ldap_host}"
   org_unit="${env_id} Directory Services"
 
   create_certificate ${common_name} ${org_unit} --ips ${ldap_static_ip}
@@ -83,15 +84,11 @@ deploy () {
   vars
   bosh -n -e ${env_id} -d openldap deploy ${manifest} \
     --var olc-suffix="${ldap_olc_suffix}" --var olc-root-dn="${ldap_olc_root_dn}" --var olc-root-password="${ldap_olc_root_password}" --var ldap-static-ip="${ldap_static_ip}" \
-    --var-file ldap-cert="${key_dir}/ldap-${env_id}.crt" --var-file ldap-key="${key_dir}/ldap-${env_id}.key"
+    --var-file ldap-cert="${ldap_cert_file}" --var-file ldap-key="${ldap_key_file}"
 }
 
 firewall() {
   gcloud --project "${project}" compute firewall-rules create "${env_id}-ldap" --allow="tcp:${ldap_port}" --source-ranges="0.0.0.0/0" --target-tags="ldap" --network="${env_id}-network "
-}
-
-tunnel () {
-  ssh -fnNT -L 6${ldap_port}:${ldap_static_ip}:${ldap_port} jumpbox@${jumpbox} -i $BOSH_GW_PRIVATE_KEY
 }
 
 binddn () {
@@ -100,11 +97,7 @@ binddn () {
 }
 
 url () {
-  echo "ldaps://${ldap_static_ip}:${ldap_port}"
-}
-
-tunnel_url () {
-  echo "ldaps://localhost:6${ldap_port}"
+  echo "ldaps://${ldap_host}:${ldap_port}"
 }
 
 lbs () {
@@ -175,12 +168,6 @@ if [ $# -gt 0 ]; then
       firewall )
         firewall
         ;;
-      tunnel )
-        tunnel
-        ;;
-      tunnel_url )
-        tunnel_url
-        ;;
       url )
         url
         ;;
@@ -224,6 +211,6 @@ ssl_certificates
 stemcell
 releases
 lbs
+dns
 deploy
 firewall
-tunnel
