@@ -28,7 +28,6 @@ if [ $# -gt 0 ]; then
     case $1 in
       --windows | --w)
         windows=1
-        shift
         ;;
       --release | --release-version | -r)
         release=${2}
