@@ -21,13 +21,16 @@ Bootstrap an environment to do various BOSH-y things. Currently GCP specific.
 
 ## Using the environment
 
-All your connections to BOSH, Vault, and LDAP will be through SSH tunnels to the Jumpbox that the BOSH Bootloader creates. To use the `bosh` CLI,
-make soure you source the file `work/bbl-env.sh` into your shell with `. work/bbl-env.sh`, which will set up the proxy that BOSH uses.
-The Vault and LDAP processes will also setup tunnels for you, so you'll be working through the default ports on `localhost` for each
-of those (8200 for Vault, 636 for LDA with SSL/TLS).  If the tunnels time out, you can recreate them with the sequence `./prepare.sh client login ; ./vault.sh tunnel ; ./ldap.sh tunnel`. *A convenience script for this is coming soon.*
+All your connections to BOSH will be through SSH tunnels to the Jumpbox that the
+BOSH Bootloader creates. To use the `bosh` CLI, make soure you source the file
+`work/bbl-env.sh` into your shell with `. work/bbl-env.sh`, which will set up
+the proxy that BOSH uses. If the tunnels times out, you can recreate it with
+`./prepare.sh client login`.
 
-Concourse and PCF have load balancers. You can access them at the expected URIs based on your configuration. The PCF Pipelines are available in the
-concourse team `pcf`, with username `pivotal`. To get the password run `pcf.sh secret concourse`
+LDAP, Vault, Concourse, and PCF have load balancers. You can access them at the
+expected URIs based on your configuration. The PCF Pipelines are available in
+the concourse team `pcf`, with username `pivotal`. To get the password run
+`pcf.sh secret concourse`
 
 ## Getting rid of the environment
 
@@ -54,8 +57,7 @@ Homebrew, so Mac users can run `brew install cloudfoundry/tap/bbl`.
 
 ## Coming soon
 
-1. Tie PCF to LDAP
-1. Credhub instead of Vault.
+1. Use the Credhub created by `bbl` instead of deploying/managing vault.
 1. Windows in PCF and concourse
 1. PCF tile support
 1. Split working directory from script directory to simplify having local changes
