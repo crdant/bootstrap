@@ -55,9 +55,9 @@ dns () {
   local address=$(gcloud compute --project ${project} addresses describe "${address_name}" --format json --region "${region}"  | jq --raw-output ".address")
   local transaction_file="${workdir}/vault-dns-transaction-${pcf_dns_zone}.xml"
 
-  gcloud dns record-sets transaction start -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
-  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${vault_host}" --ttl "${dns_ttl}" --type A "${address}" --transaction-file="${transaction_file}" --no-user-output-enabled
-  gcloud dns record-sets transaction execute -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
+  gcloud dns record-sets transaction start -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled --project ${project}
+  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${vault_host}" --ttl "${dns_ttl}" --type A "${address}" --transaction-file="${transaction_file}" --no-user-output-enabled --project ${project}
+  gcloud dns record-sets transaction execute -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled --project ${project}
 }
 
 update_cloud_config () {
@@ -86,7 +86,7 @@ unseal() {
 init () {
   # initialize the vault using the API directly to parse the JSON
   initialization=`cat ${etc_dir}/vault_init.json`
-  curl -qs --cacert ${vault_cert_file} -X PUT "${vault_addr}/v1/sys/init" -H "Accept: application/json" -H "Content-Type: application/json" -d "${initialization}" | jq '.' >${key_dir}/vault_secrets.json
+  curl -qks --cacert ${vault_cert_file} -X PUT "${vault_addr}/v1/sys/init" -H "Accept: application/json" -H "Content-Type: application/json" -d "${initialization}" | jq '.' >${key_dir}/vault_secrets.json
   unseal
 }
 
