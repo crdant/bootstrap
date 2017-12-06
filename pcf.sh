@@ -13,7 +13,7 @@ pcf_concourse_user=pivotal
 pcf_install_pipeline="deploy-pcf"
 pcf_pipelines_remote="https://github.com/pivotal-cf/pcf-pipelines.git"
 pcf_pipelines_local=${workdir}/pcf-pipelines
-pcf_pipelines_version="v0.19.0"
+pcf_pipelines_version="v0.19.2"
 pipeline_file="${workdir}/pcf-pipelines/install-pcf/gcp/pipeline.yml"
 parameter_file="${workdir}/${env_id}-${pcf_install_pipeline}-params.yml"
 
@@ -210,6 +210,10 @@ params() {
   # PCF Elastic Runtime minor version to install
   ert_major_minor_version: ^1\.12\..*$
 
+  # networking options
+  container_networking_nw_cidr: 10.254.32.0/22
+  internet_connected: false
+
   # configure routing
   router_tls_ciphers: ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384
   routing_disable_http: true
@@ -271,17 +275,17 @@ create_infrastructure () {
 dns () {
   # TODO: trap errors and delete transaction file for sanity (mayhaps just rollback with gcloud dns)
   echo "Delegating DNS..."
-  local name_servers=( `gcloud dns managed-zones describe "${pcf_dns_zone}" --format json | jq -r  '.nameServers | join(" ")'` )
-  local transaction_file="${WORKDIR}/pcf-dns-transaction-${pcf_dns_zone}.xml"
+  local name_servers=( `gcloud dns managed-zones describe "${pcf_dns_zone}" --format json --project=${project} | jq -r  '.nameServers | join(" ")'` )
+  local transaction_file="${workdir}/pcf-dns-transaction-${pcf_dns_zone}.xml"
 
-  gcloud dns record-sets transaction start -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
+  gcloud dns record-sets transaction start -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled --project=${project}
 
-  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[0]}" --transaction-file="${transaction_file}" --no-user-output-enabled
-  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[1]}" --transaction-file="${transaction_file}" --no-user-output-enabled
-  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[2]}" --transaction-file="${transaction_file}" --no-user-output-enabled
-  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[3]}" --transaction-file="${transaction_file}" --no-user-output-enabled
+  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[0]}" --transaction-file="${transaction_file}" --no-user-output-enabled --project=${project}
+  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[1]}" --transaction-file="${transaction_file}" --no-user-output-enabled --project=${project}
+  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[2]}" --transaction-file="${transaction_file}" --no-user-output-enabled --project=${project}
+  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[3]}" --transaction-file="${transaction_file}" --no-user-output-enabled --project=${project}
 
-  gcloud dns record-sets transaction execute -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
+  gcloud dns record-sets transaction execute -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled --project=${project}
 }
 
 configure_director() {
@@ -424,14 +428,16 @@ start () {
   director_ip="$(echo $director_properties | jq --raw-output .address)"
 
   cat <<STOP_COMMAND > ${workdir}/start.sh
-    bosh2 -e ${director_ip} --ca-cert /var/tempest/workspaces/default/root_ca_certificate alias-env ${env_id}
-    bosh2 -e ${env_id} log-in
-    for deployment in \$(bosh2 -n -e ${env_id} deployments --json | jq --raw-output '.Tables[].Rows[].name'); do
-      for instance in \$(bosh2 -n -e ${env_id} -d \${deployment} instances --json | jq --raw-output '.Tables[].Rows[].instance' ) ; do
-        bosh2 -n -e ${env_id} -d \${deployment} start \${instance}
-      done
-      bosh2 -n -e ${env_id} -d \${deployment} update-resurrection on
-    done
+#!/usr/bin/env bash
+
+bosh2 -e ${director_ip} --ca-cert /var/tempest/workspaces/default/root_ca_certificate alias-env ${env_id}
+bosh2 -e ${env_id} log-in
+for deployment in \$(bosh2 -n -e ${env_id} deployments --json | jq --raw-output '.Tables[].Rows[].name'); do
+  for instance in \$(bosh2 -n -e ${env_id} -d \${deployment} instances --json | jq --raw-output '.Tables[].Rows[].instance' ) ; do
+    bosh2 -n -e ${env_id} -d \${deployment} start \${instance}
+  done
+  bosh2 -n -e ${env_id} -d \${deployment} update-resurrection on
+done
 STOP_COMMAND
     gcloud compute scp ${workdir}/start.sh ubuntu@pcf-${short_id}-ops-manager: --zone ${availability_zone_1}
 }
@@ -441,14 +447,16 @@ stop () {
   director_ip="$(echo $director_properties | jq --raw-output .address)"
 
   cat <<STOP_COMMAND > ${workdir}/stop.sh
-    bosh2 -e ${director_ip} --ca-cert /var/tempest/workspaces/default/root_ca_certificate alias-env ${env_id}
-    bosh2 -e ${env_id} log-in
-    for deployment in \$(bosh2 -n -e ${env_id} deployments --json | jq --raw-output '.Tables[].Rows[].name'); do
-      bosh2 -n -e ${env_id} -d \${deployment} update-resurrection off
-      for instance in \$(bosh2 -n -e ${env_id} -d \${deployment} instances --json | jq --raw-output '.Tables[].Rows[].instance' ) ; do
-        bosh2 -n -e ${env_id} -d \${deployment} stop \${instance} --hard
-      done
-    done
+#!/usr/bin/env bash
+
+bosh2 -e ${director_ip} --ca-cert /var/tempest/workspaces/default/root_ca_certificate alias-env ${env_id}
+bosh2 -e ${env_id} log-in
+for deployment in \$(bosh2 -n -e ${env_id} deployments --json | jq --raw-output '.Tables[].Rows[].name'); do
+  bosh2 -n -e ${env_id} -d \${deployment} update-resurrection off
+  for instance in \$(bosh2 -n -e ${env_id} -d \${deployment} instances --json | jq --raw-output '.Tables[].Rows[].instance' ) ; do
+    bosh2 -n -e ${env_id} -d \${deployment} stop \${instance} --hard
+  done
+done
 STOP_COMMAND
     gcloud compute scp ${workdir}/stop.sh ubuntu@pcf-${short_id}-ops-manager: --zone ${availability_zone_1}
 }
