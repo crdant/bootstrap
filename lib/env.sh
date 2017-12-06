@@ -2,9 +2,10 @@ account=cdantonio@pivotal.io
 email=${account}
 domain=crdant.io
 project=fe-cdantonio
+iaas=gcp
 
 domain_token=`echo ${domain} | tr . -`
-subdomain="bbl.gcp.${domain}"
+subdomain="bbl.${iaas}.${domain}"
 
 region="us-central1"
 storage_location="us"
@@ -16,6 +17,7 @@ availability_zone_3="${region}-b"
 service_account_name=`echo ${subdomain} | tr . -`
 service_account="${service_account_name}@${project}.iam.gserviceaccount.com"
 
+state_dir="${BASEDIR}/state"
 key_dir="${BASEDIR}/keys"
 key_file="${key_dir}/${project}-${service_account_name}.json"
 workdir="${BASEDIR}/work"
