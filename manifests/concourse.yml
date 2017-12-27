@@ -6,6 +6,8 @@ releases:
   version: latest
 - name: garden-runc
   version: latest
+- name: postgres
+  version: latest
 
 stemcells:
 - alias: trusty
@@ -41,7 +43,13 @@ instance_groups:
       tls_cert: ((atc-cert-file))
       tls_key: ((atc-key-file))
 
-      postgresql_database: &atc_db atc
+      token_signing_key: ((token_signing_key))
+
+      postgresql:
+        database: &db_name atc
+        role: &db_role
+          name: concourse
+          password: ((postgres_password))
 
       vault:
         url: https://10.0.31.195:8200
@@ -56,7 +64,10 @@ instance_groups:
 
   - name: tsa
     release: concourse
-    properties: {}
+    properties:
+      host_key: ((tsa_host_key))
+      token_signing_key: ((token_signing_key))
+      authorized_keys: [((worker_key.public_key))]
 
 - name: db
   instances: 1
@@ -68,14 +79,15 @@ instance_groups:
   azs: [z1]
   networks: [{name: private}]
   jobs:
-  - name: postgres
-    release: postgres
+  - release: postgres
+    name: postgres
     properties:
       databases:
-      - name: *atc_db
-        # make up a role and password
-        role: atc
-        password: flourish-languish-naif-mert
+        port: 5432
+        databases:
+        - name: *db_name
+        roles:
+        - *db_role
 
 - name: worker
   instances: 1
@@ -89,18 +101,34 @@ instance_groups:
   azs: [z1]
   networks: [{name: private}]
   jobs:
-  - name: groundcrew
-    release: concourse
-    properties: {}
-  - name: baggageclaim
-    release: concourse
-    properties: {}
-  - name: garden
-    release: garden-runc
+  - release: concourse
+    name: groundcrew
+    consumes: {baggageclaim: {from: worker-baggageclaim}}
+    properties:
+      drain_timeout: 10m
+      tsa: {worker_key: ((worker_key))}
+
+  - release: concourse
+    name: baggageclaim
+    properties: {log_level: debug}
+    provides: {baggageclaim: {as: worker-baggageclaim}}
+
+  - release: garden-runc
+    name: garden
     properties:
       garden:
         listen_network: tcp
         listen_address: 0.0.0.0:7777
+
+variables:
+- name: postgres_password
+  type: password
+- name: token_signing_key
+  type: rsa
+- name: tsa_host_key
+  type: ssh
+- name: worker_key
+  type: ssh
 
 update:
   canaries: 1
