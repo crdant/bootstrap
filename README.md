@@ -57,7 +57,9 @@ Homebrew, so Mac users can run `brew install cloudfoundry/tap/bbl`.
 
 ## Coming soon
 
-1. Use the Credhub created by `bbl` instead of deploying/managing vault.
+1. Deploy concourse with standard manifest plus ops files from [concourse-deployment](https://github.com/concourse/concourse-deployment)
+1. Use `yaml-patch` to edit the cloud config to make changes more idempotent.
+1. Use the Credhub (created by `bbl` or standalone) instead of deploying/managing vault.
 1. Windows in PCF and concourse
 1. PCF tile support
 1. Split working directory from script directory to simplify having local changes
