@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-BASEDIR=`dirname $0`
+BASEDIR=$(dirname $(dirname $0))
 . "${BASEDIR}/lib/env.sh"
 set -e
 
