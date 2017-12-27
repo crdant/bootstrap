@@ -7,7 +7,7 @@ BASEDIR=`dirname $0`
 
 concourse_team=pcf
 concourse_target=${env_id}-${concourse_team}
-concourse_url=`./concourse.sh url`
+concourse_url=`concourse url`
 pcf_concourse_user=pivotal
 
 pcf_install_pipeline="deploy-pcf"
@@ -304,15 +304,15 @@ firewall() {
 }
 
 ldap () {
-  ldap_url=`${BASEDIR}/ldap.sh url`
+  ldap_url=`ldap url`
   ldap_host=`echo ${ldap_url} | cut -d: -f2 | sed -e 's#//##g'`
   ldap_cert=`cat ${key_dir}/ldap-${env_id}.crt | perl -pe 's#\n#\x5c\x5c\x6e#g'`
 
   safe_auth_bootstrap
   ldap_admin_password=`safe get secret/bootstrap/ldap/admin:value`
-  ldap_admin_bindDN=`${BASEDIR}/ldap.sh binddn`
+  ldap_admin_bindDN=`ldap binddn`
 
-  domain_context=`${BASEDIR}/ldap.sh convert ${domain}`
+  domain_context=`ldap convert ${domain}`
   pcf_bindDN="pcf_${env_id},$domain_context"
   pcf_bind_password=`generate_passphrase 4`
 
@@ -321,7 +321,7 @@ ldap () {
   safe set ${secret_root}/uaa_ldap_password value=${pcf_bind_password}
 
   pcf_bind_password_enc=`echo {SHA}$(echo -n ${pcf_bind_password} | openssl sha -sha256 -binary) | base64`
-  LDAPTLS_REQCERT=never ldapadd -H `${BASEDIR}/ldap.sh tunnel_url` -D ${ldap_admin_bindDN} -w ${ldap_admin_password} -f <(
+  LDAPTLS_REQCERT=never ldapadd -H `ldap tunnel_url` -D ${ldap_admin_bindDN} -w ${ldap_admin_password} -f <(
     cat <<LDIF
 version: 1
 

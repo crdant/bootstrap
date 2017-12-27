@@ -63,8 +63,8 @@ if [ -z "$release" ] ; then
   exit 1
 fi
 
-opsman_username=$(${BASEDIR}/pcf.sh secret pcf_opsman_admin_username)
-opsman_password=$(${BASEDIR}/pcf.sh secret pcf_opsman_admin_password)
+opsman_username=$(pcf secret pcf_opsman_admin_username)
+opsman_password=$(pcf secret pcf_opsman_admin_password)
 
 if [ -n "$download" ] ; then
   download ${slug} ${release}
