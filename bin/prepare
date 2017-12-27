@@ -11,6 +11,10 @@ if [ ! -d ${key_dir} ] ; then
   mkdir -p ${key_dir}
 fi
 
+if [ ! -d ${state_dir} ] ; then
+  mkdir -p ${state_dir}
+fi
+
 service_accounts() {
   echo "Configuring service accounts..."
   gcloud iam service-accounts --project "${project}" create "${service_account_name}" --display-name "BOSH Boot Loader (bbl)" --no-user-output-enabled
@@ -24,7 +28,7 @@ ca () {
 
 director() {
   echo "Creating the $env_id BOSH director..."
-  bbl up --state-dir ${state_dir} --iaas gcp --gcp-service-account-key "${key_file}" --gcp-zone "${availability_zone_1}" --gcp-region "${region}"
+  bbl up --state-dir ${state_dir} --iaas gcp --gcp-service-account-key "${key_file}" --gcp-region "${region}"
   env_id=`bbl env-id --state-dir ${state_dir} --gcp-service-account-key "${key_file}"`
   firewall
 }
