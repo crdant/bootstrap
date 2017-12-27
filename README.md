@@ -6,18 +6,18 @@ Bootstrap an environment to do various BOSH-y things. Currently GCP specific.
 
 1. Assure dependencies are met (see below)
 1. Enable the APIs for google.
-1. Edit `lib/env.sh` to match your needs.
-1. Run `prepare.sh` to prepare GCP and the bootstrap BOSH environment
+1. Edit `lienv` to match your needs.
+1. Run `prepare` to prepare GCP and the bootstrap BOSH environment
 1. Make sure DNS for your bootstrap subdomain is delegated from your primary zone (if needed).
-1. Run `vault.sh` to make Vault available for secrets.
-1. Configure `vault` for the bootstrap environment by running `configure.sh`.
-1. Add concourse to the environment with `concourse.sh`.
-1. (optional) Add LDAP to the environment with `ldap.sh`.
+1. Run `vault` to make Vault available for secrets.
+1. Configure `vault` for the bootstrap environment by running `configure`.
+1. Add concourse to the environment with `concourse`.
+1. (optional) Add LDAP to the environment with `ldap`.
 1. Set the environment variable `PIVNET_TOKEN` to your Pivotal Network API token.
 1. An SSH key in your `.ssh` directory named `concourse_github` with the public key registered with your Github account.
 1. Add secrets under `concourse/pcf/deploy-pcf` path for your Google Cloud Storage
    S3-compatible access key id (`gcp_storage_access_key`) and secret access key (`gcp_storage_secret_key`) in vault.
-1. Running the `pcf.sh` now will load [PCF Platform Automation with Concourse](https://network.pivotal.io/products/pcf-automation), nee [PCF Pipelines](https://github.com/pivotal-cf/pcf-pipelines), into the Concourse you just installed and trigger the right jobs to install PCF.
+1. Running the `pcf` now will load [PCF Platform Automation with Concourse](https://network.pivotal.io/products/pcf-automation), nee [PCF Pipelines](https://github.com/pivotal-cf/pcf-pipelines), into the Concourse you just installed and trigger the right jobs to install PCF.
 
 ## Using the environment
 
@@ -25,22 +25,22 @@ All your connections to BOSH will be through SSH tunnels to the Jumpbox that the
 BOSH Bootloader creates. To use the `bosh` CLI, make soure you source the file
 `work/bbl-env.sh` into your shell with `. work/bbl-env.sh`, which will set up
 the proxy that BOSH uses. If the tunnels times out, you can recreate it with
-`./prepare.sh client login`.
+`prepare client login`.
 
 LDAP, Vault, Concourse, and PCF have load balancers. You can access them at the
 expected URIs based on your configuration. The PCF Pipelines are available in
 the concourse team `pcf`, with username `pivotal`. To get the password run
-`pcf.sh secret concourse`
+`pcf secret concourse`
 
 ## Getting rid of the environment
 
-Each of the scripts has a `teardown` command-line argument (except `prepare.sh`). Run those, then run `teardown.sh`.
+Each of the scripts has a `teardown` command-line argument (except `prepare`). Run those, then run `teardown`.
 
-1. Teardown PCF (`pcf.sh teardown`).
-2. If you added LDAP, remove it from the environment with `ldap.sh teardown`.
-3. Take down concourse with `concourse.sh teardown`.
-4. Get rid of Vault with `vault.sh teardown`.
-5. Lastly, take down the infrastructure with `teardown.sh`.
+1. Teardown PCF (`pcf teardown`).
+2. If you added LDAP, remove it from the environment with `ldap teardown`.
+3. Take down concourse with `concourse teardown`.
+4. Get rid of Vault with `vault teardown`.
+5. Lastly, take down the infrastructure with `teardown`.
 
 ## Ergonomics
 
@@ -48,7 +48,7 @@ Each command has some subcommands for running a piece of what it does. More to c
 
 ## Dependencies
 
-1. [BOSH Boot Loader](https://github.com/cloudfoundry/bosh-bootloader) 4.4 or later. It's in the Cloud Foundry tap on
+1. [BOSH Boot Loader](https://github.com/cloudfoundrb-bootloader) 4.4 or later. It's in the Cloud Foundry tap on
 Homebrew, so Mac users can run `brew install cloudfoundry/tap/bbl`.
 2. [Safe](https://github.com/starkandwayne/safe). On a Mac you can run `brew install starkandwayne/cf/safe`.
 3. Hashicorp [Vault CLI](https://www.vaultproject.io). If you're on a Mac run `brew install vault`.
