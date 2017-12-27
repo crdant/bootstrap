@@ -68,8 +68,8 @@ instance_groups:
   azs: [z1]
   networks: [{name: private}]
   jobs:
-  - name: postgresql
-    release: concourse
+  - name: postgres
+    release: postgres
     properties:
       databases:
       - name: *atc_db

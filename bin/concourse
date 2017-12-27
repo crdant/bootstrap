@@ -6,12 +6,14 @@ BASEDIR=$(dirname $(dirname $0))
 . "${BASEDIR}/lib/secrets.sh"
 . "${BASEDIR}/lib/certificates.sh"
 
-stemcell_version=3431.13
-stemcell_checksum=8ae6d01f01f627e70e50f18177927652a99a4585
-concourse_version=3.5.0
-concourse_checksum=65a974b3831bb9908661a5ffffbe456e10185149
-garden_version=1.6.0
-garden_checksum=58fbc64aff303e6d76899441241dd5dacef50cb7
+stemcell_version=3468.15
+stemcell_checksum=1788c8dafbb93e16ca3637f8c84052a0218675f0
+concourse_version=3.8.0
+concourse_checksum=99e134676df72e18c719ccfbd7977bd9449e6fd4
+garden_version=1.10.0
+garden_checksum=9c2ad4a961db49a5349a26d4240b8f8b9b54af88
+postgres_version=23
+postgres_checksum=4b5265bfd5f92cf14335a75658658a0db0bca927
 
 concourse_host="concourse.${subdomain}"
 concourse_url="https://${concourse_host}"
@@ -38,6 +40,7 @@ stemcell () {
 releases () {
   bosh -e "${env_id}" upload-release https://bosh.io/d/github.com/concourse/concourse?v=${concourse_version} --sha1 ${concourse_checksum}
   bosh -e "${env_id}" upload-release https://bosh.io/d/github.com/cloudfoundry/garden-runc-release?v=${garden_version} --sha1 ${garden_checksum}
+  bosh -e "${env_id}" upload-release https://bosh.io/d/github.com/cloudfoundry/postgres-release?v=${postgres_version} --sha1 ${postgres_checksum}
 }
 
 safe_auth () {
@@ -68,7 +71,8 @@ deploy () {
 }
 
 lbs () {
-  bbl up --state-dir ${state-dir} --lb-type concourse --lb-cert ${lb_cert_file} --lb-key ${lb_key_file} --gcp-service-account-key "${key_file}"
+  echo "Configuring load balancers..."
+  bbl create-lbs --debug --state-dir ${state_dir} --type concourse --cert ${lb_cert_file} --key ${lb_key_file} --gcp-service-account-key "${key_file}"
 }
 
 dns() {
