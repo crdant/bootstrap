@@ -6,7 +6,7 @@ Bootstrap an environment to do various BOSH-y things. Currently GCP specific.
 
 1. Assure dependencies are met (see below)
 1. Enable the APIs for google.
-1. Edit `lienv` to match your needs.
+1. Edit `lib/env.sh` to match your needs.
 1. Run `prepare` to prepare GCP and the bootstrap BOSH environment
 1. Make sure DNS for your bootstrap subdomain is delegated from your primary zone (if needed).
 1. Run `vault` to make Vault available for secrets.
