@@ -33,10 +33,10 @@ state="MA"
 city="Cambridge"
 organization="${domain}"
 
-if [ -f "${BASEDIR}/bbl-state.json" ] ; then
-  jumpbox=`bbl jumpbox-address --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" | cut -d':' -f1 `
-  env_id=`bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}"`
-  short_id=`bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" | sed s/bbl-env-// | cut -dt -f1`
+if [ -f "${state_dir}/bbl-state.json" ] ; then
+  jumpbox=`bbl jumpbox-address --state-dir ${state_dir} --gcp-service-account-key "${key_file}" | cut -d':' -f1 `
+  env_id=`bbl env-id --state-dir ${state_dir} --gcp-service-account-key "${key_file}"`
+  short_id=`bbl env-id --state-dir ${state_dir} --gcp-service-account-key "${key_file}" | sed s/bbl-env-// | cut -dt -f1`
 else
   env_id=`echo ${subdomain} | tr . -`
 fi

@@ -5,7 +5,7 @@ BASEDIR=`dirname $0`
 
 director() {
   echo "Destroying the BOSH director..."
-  bbl down --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" --no-confirm
+  bbl down --state-dir ${state_dir} --gcp-service-account-key "${key_file}" --no-confirm
 }
 
 service_accounts () {

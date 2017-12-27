@@ -3,7 +3,7 @@ BASEDIR=`dirname $0`
 . "${BASEDIR}/lib/env.sh"
 . "${BASEDIR}/lib/certificates.sh"
 
-env_id=`bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}"`
+env_id=`bbl env-id --state-dir ${state_dir} --gcp-service-account-key "${key_file}"`
 stemcell_version=3431.13
 stemcell_checksum=8ae6d01f01f627e70e50f18177927652a99a4585
 

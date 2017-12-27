@@ -68,7 +68,7 @@ deploy () {
 }
 
 lbs () {
-  bbl create-lbs --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" --type concourse --key ${lb_key_file} --cert ${lb_cert_file}
+  bbl up --state-dir ${state-dir} --lb-type concourse --lb-cert ${lb_cert_file} --lb-key ${lb_key_file} --gcp-service-account-key "${key_file}" 
 }
 
 dns() {
@@ -119,7 +119,7 @@ teardown () {
   gcloud dns record-sets --project ${project} transaction remove -z "${dns_zone}" --name "${concourse_host}" --ttl "${dns_ttl}" --type A "${lb_address}" --transaction-file="${transaction_file}"
   gcloud dns record-sets --project ${project} transaction execute -z "${dns_zone}" --transaction-file="${transaction_file}"
 
-  bbl delete-lbs --gcp-service-account-key "${key_file}" --gcp-project-id "${project}"
+  bbl delete-lbs --gcp-service-account-key "${key_file}"
 }
 
 
