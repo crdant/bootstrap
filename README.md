@@ -9,8 +9,8 @@ Bootstrap an environment to do various BOSH-y things. Currently GCP specific.
 1. Edit `lib/env.sh` to match your needs.
 1. Run `prepare` to prepare GCP and the bootstrap BOSH environment
 1. Make sure DNS for your bootstrap subdomain is delegated from your primary zone (if needed).
-1. Run `vault` to make Vault available for secrets.
-1. Configure `vault` for the bootstrap environment by running `configure`.
+1. Run `secrets` to make Vault available for secrets.
+1. Configure `secrets` for the bootstrap environment by running `configure`.
 1. Add concourse to the environment with `concourse`.
 1. (optional) Add LDAP to the environment with `ldap`.
 1. Set the environment variable `PIVNET_TOKEN` to your Pivotal Network API token.
@@ -39,7 +39,7 @@ Each of the scripts has a `teardown` command-line argument (except `prepare`). R
 1. Teardown PCF (`pcf teardown`).
 2. If you added LDAP, remove it from the environment with `ldap teardown`.
 3. Take down concourse with `concourse teardown`.
-4. Get rid of Vault with `vault teardown`.
+4. Get rid of Vault with `secrets teardown`.
 5. Lastly, take down the infrastructure with `teardown`.
 
 ## Ergonomics
@@ -64,7 +64,7 @@ Homebrew, so Mac users can run `brew install cloudfoundry/tap/bbl`.
 1. Simple script(s) to do the manual stuff more easily.
 1. Forcing and/or testing without SSH multiplexing. I use it all the time, colleagues who don't are seeing some weirdness.
 1. Making this document more readable and useful.
-1. Making vault highly available.
+1. Making secrets highly available.
 1. Making LDAP highly available.
 1. Other IaaSes.
 1. Rewrite in a programming language for better modularity and invocation across modules
