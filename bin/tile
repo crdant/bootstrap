@@ -12,8 +12,8 @@ parameter_file="${workdir}/${slug}-upgrade-params.yml"
 pipeline_file=${workdir}/pcf-pipelines/upgrade-tile/pipeline.yml
 
 
-opsman_username=$(pcf secret pcf_opsman_admin_username)
-opsman_password=$(pcf secret pcf_opsman_admin_password)
+opsman_username=$(pcf secret opsman_admin_username)
+opsman_password=$(pcf secret opsman_admin_password)
 
 download () {
   product_slug=${1}
