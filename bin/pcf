@@ -113,7 +113,7 @@ get_credential () {
   if [ -z "${field}" ] ; then
     field="password"
   fi
-  credential=$(om -k --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/pcf_opsman_admin_username:value` --password `safe get ${secret_root}/pcf_opsman_admin_password:value` --skip-ssl-validation credentials --product-name ${product} --credential-reference ${credential} --credential-field ${field})
+  credential=$(om -k --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/opsman_admin_username:value` --password `safe get ${secret_root}/opsman_admin_password:value` --skip-ssl-validation credentials --product-name ${product} --credential-reference ${credential} --credential-field ${field})
   echo $credential
 }
 
@@ -413,8 +413,8 @@ LDIF
       '
   )
 
-  om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/pcf_opsman_admin_username:value` \
-      --password `safe get ${secret_root}/pcf_opsman_admin_password:value` --skip-ssl-validation \
+  om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/opsman_admin_username:value` \
+      --password `safe get ${secret_root}/opsman_admin_password:value` --skip-ssl-validation \
     configure-product --product-name cf --product-properties "$ldap_properties"
 }
 
@@ -425,7 +425,7 @@ wipe_env() {
 
 
 start () {
-  director_properties="$(om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/pcf_opsman_admin_username:value` --password `safe get ${secret_root}/pcf_opsman_admin_password:value` --skip-ssl-validation curl --silent --path /api/v0/deployed/director/manifest | jq --raw-output '.jobs[].properties.director' )"
+  director_properties="$(om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/opsman_admin_username:value` --password `safe get ${secret_root}/opsman_admin_password:value` --skip-ssl-validation curl --silent --path /api/v0/deployed/director/manifest | jq --raw-output '.jobs[].properties.director' )"
   director_ip="$(echo $director_properties | jq --raw-output .address)"
 
   cat <<STOP_COMMAND > ${workdir}/start.sh
@@ -444,7 +444,7 @@ STOP_COMMAND
 }
 
 stop () {
-  director_properties="$(om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/pcf_opsman_admin_username:value` --password `safe get ${secret_root}/pcf_opsman_admin_password:value` --skip-ssl-validation curl --silent --path /api/v0/deployed/director/manifest | jq --raw-output '.jobs[].properties.director' )"
+  director_properties="$(om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/opsman_admin_username:value` --password `safe get ${secret_root}/opsman_admin_password:value` --skip-ssl-validation curl --silent --path /api/v0/deployed/director/manifest | jq --raw-output '.jobs[].properties.director' )"
   director_ip="$(echo $director_properties | jq --raw-output .address)"
 
   cat <<STOP_COMMAND > ${workdir}/stop.sh
@@ -468,8 +468,32 @@ opsman_exec () {
 
 exec_om () {
   safe_auth
-  exec om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/pcf_opsman_admin_username:value` \
-      --password `safe get ${secret_root}/pcf_opsman_admin_password:value` --skip-ssl-validation $@
+  exec om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/opsman_admin_username:value` \
+      --password `safe get ${secret_root}/opsman_admin_password:value` --skip-ssl-validation $@
+}
+
+tunnel () {
+  local port=$(netstat -aln | awk '
+  $6 == "LISTEN" {
+    if ($4 ~ "[.:][0-9]+$") {
+      split($4, a, /[:.]/);
+      port = a[length(a)];
+      p[port] = 1
+    }
+  }
+  END {
+    srand()
+    while (i = (44000 + int(rand() * 15000))){
+      if ( !p[i]) {
+        print i;
+        exit 0;
+      };
+    };
+  }')
+
+  gcloud compute scp ubuntu@pcf-${short_id}-ops-manager:/var/tempest/workspaces/default/root_ca_certificate ${key_dir}/bosh-${short_id}-ca.crt --zone ${availability_zone_1}
+  gcloud compute ssh ubuntu@pcf-${short_id}-ops-manager --zone ${availability_zone_1} -- -f -N -o StrictHostKeyChecking=no -o ServerAliveInterval=300 -D ${port}
+  echo "export BOSH_ALL_PROXY=socks5://localhost:${port}"
 }
 
 teardown() {
@@ -579,6 +603,9 @@ if [ $# -gt 0 ]; then
         ;;
       teardown)
         teardown
+        ;;
+      tunnel)
+        tunnel
         ;;
       om)
         shift
