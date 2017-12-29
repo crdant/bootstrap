@@ -467,7 +467,7 @@ opsman_exec () {
 }
 
 exec_om () {
-  safe_auth
+  safe_auth > /dev/null 2>&1
   exec om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/opsman_admin_username:value` \
       --password `safe get ${secret_root}/opsman_admin_password:value` --skip-ssl-validation $@
 }
@@ -491,9 +491,16 @@ tunnel () {
     };
   }')
 
-  gcloud compute scp ubuntu@pcf-${short_id}-ops-manager:/var/tempest/workspaces/default/root_ca_certificate ${key_dir}/bosh-${short_id}-ca.crt --zone ${availability_zone_1}
-  gcloud compute ssh ubuntu@pcf-${short_id}-ops-manager --zone ${availability_zone_1} -- -f -N -o StrictHostKeyChecking=no -o ServerAliveInterval=300 -D ${port}
-  echo "export BOSH_ALL_PROXY=socks5://localhost:${port}"
+  gcloud compute scp ubuntu@pcf-${short_id}-ops-manager:/var/tempest/workspaces/default/root_ca_certificate ${key_dir}/bosh-${short_id}-ca.crt --zone ${availability_zone_1} > /dev/null 2>&1
+  gcloud compute ssh ubuntu@pcf-${short_id}-ops-manager --zone ${availability_zone_1} -- -f -N -o StrictHostKeyChecking=no -o ServerAliveInterval=300 -D ${port} > /dev/null 2>&1
+
+  local bosh_cred="$(exec_om curl --silent --path /api/v0/deployed/director/credentials/bosh_commandline_credentials | jq --raw-output .credential)"
+  local bosh_vars="${bosh_cred% *} BOSH_CA_CERT=${key_dir}/bosh-${short_id}-ca.crt BOSH_ALL_PROXY=socks5://localhost:${port}"
+
+  eval "export ${bosh_vars}"
+  bosh alias-env ${short-id}-pcf > /dev/null 2>&1
+  bosh log-in > /dev/null 2>&1
+  echo "export ${bosh_vars} BOSH_ENVIRONMENT=${short_id}-pcf"
 }
 
 teardown() {
