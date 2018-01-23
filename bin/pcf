@@ -425,41 +425,25 @@ wipe_env() {
 
 
 start () {
-  director_properties="$(om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/opsman_admin_username:value` --password `safe get ${secret_root}/opsman_admin_password:value` --skip-ssl-validation curl --silent --path /api/v0/deployed/director/manifest | jq --raw-output '.jobs[].properties.director' )"
-  director_ip="$(echo $director_properties | jq --raw-output .address)"
+  tunnel
 
-  cat <<STOP_COMMAND > ${workdir}/start.sh
-#!/usr/bin/env bash
-
-bosh2 -e ${director_ip} --ca-cert /var/tempest/workspaces/default/root_ca_certificate alias-env ${env_id}
-bosh2 -e ${env_id} log-in
-for deployment in \$(bosh2 -n -e ${env_id} deployments --json | jq --raw-output '.Tables[].Rows[].name'); do
-  for instance in \$(bosh2 -n -e ${env_id} -d \${deployment} instances --json | jq --raw-output '.Tables[].Rows[].instance' ) ; do
-    bosh2 -n -e ${env_id} -d \${deployment} start \${instance}
+  for deployment in $(bosh -n -e ${short_id}-pcf deployments --json | jq --raw-output '.Tables[].Rows[].name'); do
+    for instance in $(bosh -n -e ${short_id}-pcf -d ${deployment} instances --json | jq --raw-output '.Tables[].Rows[].instance' ) ; do
+      bosh -n  -e ${short_id}-pcf -d ${deployment} start ${instance}
+    done
+    bosh -n -e ${short_id}-pcf -d ${deployment} update-resurrection on
   done
-  bosh2 -n -e ${env_id} -d \${deployment} update-resurrection on
-done
-STOP_COMMAND
-    gcloud compute scp ${workdir}/start.sh ubuntu@pcf-${short_id}-ops-manager: --zone ${availability_zone_1}
+
 }
 
 stop () {
-  director_properties="$(om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/opsman_admin_username:value` --password `safe get ${secret_root}/opsman_admin_password:value` --skip-ssl-validation curl --silent --path /api/v0/deployed/director/manifest | jq --raw-output '.jobs[].properties.director' )"
-  director_ip="$(echo $director_properties | jq --raw-output .address)"
-
-  cat <<STOP_COMMAND > ${workdir}/stop.sh
-#!/usr/bin/env bash
-
-bosh2 -e ${director_ip} --ca-cert /var/tempest/workspaces/default/root_ca_certificate alias-env ${env_id}
-bosh2 -e ${env_id} log-in
-for deployment in \$(bosh2 -n -e ${env_id} deployments --json | jq --raw-output '.Tables[].Rows[].name'); do
-  bosh2 -n -e ${env_id} -d \${deployment} update-resurrection off
-  for instance in \$(bosh2 -n -e ${env_id} -d \${deployment} instances --json | jq --raw-output '.Tables[].Rows[].instance' ) ; do
-    bosh2 -n -e ${env_id} -d \${deployment} stop \${instance} --hard
+  tunnel
+  for deployment in $(bosh -n -e ${short_id}-pcf deployments --json | jq --raw-output '.Tables[].Rows[].name'); do
+    bosh -n -e ${short_id}-pcf -d ${deployment} update-resurrection off
+    for instance in $(bosh -e ${short_id}-pcf -d ${deployment} instances --json | jq --raw-output '.Tables[].Rows[].instance' ) ; do
+      bosh -n -e ${short_id}-pcf -d ${deployment} stop ${instance} --hard
+    done
   done
-done
-STOP_COMMAND
-    gcloud compute scp ${workdir}/stop.sh ubuntu@pcf-${short_id}-ops-manager: --zone ${availability_zone_1}
 }
 
 opsman_exec () {
