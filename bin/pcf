@@ -428,9 +428,7 @@ start () {
   tunnel
 
   for deployment in $(bosh -n -e ${short_id}-pcf deployments --json | jq --raw-output '.Tables[].Rows[].name'); do
-    for instance in $(bosh -n -e ${short_id}-pcf -d ${deployment} instances --json | jq --raw-output '.Tables[].Rows[].instance' ) ; do
-      bosh -n  -e ${short_id}-pcf -d ${deployment} start ${instance}
-    done
+    bosh -n  -e ${short_id}-pcf -d ${deployment} start
     bosh -n -e ${short_id}-pcf -d ${deployment} update-resurrection on
   done
 }
@@ -440,9 +438,7 @@ stop () {
 
   for deployment in $(bosh -n -e ${short_id}-pcf deployments --json | jq --raw-output '.Tables[].Rows[].name'); do
     bosh -n -e ${short_id}-pcf -d ${deployment} update-resurrection off
-    for instance in $(bosh -e ${short_id}-pcf -d ${deployment} instances --json | jq --raw-output '.Tables[].Rows[] | select( .process_state == "running") .instance' ) ; do
-      bosh -n -e ${short_id}-pcf -d ${deployment} stop ${instance} --hard
-    done
+    bosh -n -e ${short_id}-pcf -d ${deployment} stop --hard
   done
 }
 
