@@ -1,7 +1,7 @@
 - op: add
   path: /resources/-
   value:
-    name: homelab
+    name: bootstrap
     type: git
     source:
       uri: https://github.com/crdant/bootstrap.git

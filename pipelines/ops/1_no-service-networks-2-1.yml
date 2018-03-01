@@ -1,4 +1,9 @@
 ---
+- op: add
+  path: /jobs/name=configure-director/plan/0/aggregate/-
+  value:
+    get: bootstrap
+
 - op: replace
   path: /jobs/name=configure-director/plan/task=configure-director
   value:
