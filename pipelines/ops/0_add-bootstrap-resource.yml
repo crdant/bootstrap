@@ -4,5 +4,5 @@
     name: homelab
     type: git
     source:
-      uri: https://github.com/crdant/homelab.git
+      uri: https://github.com/crdant/bootstrap.git
       branch: master
