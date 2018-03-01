@@ -111,8 +111,8 @@ if [ $# -gt 0 ]; then
         ;;
     esac
     shift
-    exit
   done
+  exit
 fi
 
 service_accounts
