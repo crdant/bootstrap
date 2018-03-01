@@ -1,0 +1,20 @@
+---
+- op: replace
+  path: /jobs/name=configure-director/plan/task=configure-director
+  value:
+    task: configure-director
+    file: bootstrap/pipelines/tasks/config-director/task.yml
+    params:
+      GCP_PROJECT_ID: ((gcp_project_id))
+      GCP_REGION: ((gcp_region))
+      GCP_RESOURCE_PREFIX: ((gcp_resource_prefix))
+      GCP_SERVICE_ACCOUNT_KEY: ((gcp_service_account_key))
+      GCP_ZONE_1: ((gcp_zone_1))
+      GCP_ZONE_2: ((gcp_zone_2))
+      GCP_ZONE_3: ((gcp_zone_3))
+      OPS_MGR_PWD: ((opsman_admin_password))
+      OPS_MGR_TRUSTED_CERTS: ((opsman_trusted_certs))
+      OPS_MGR_USR: ((opsman_admin_username))
+      OPSMAN_CLIENT_ID: ((opsman_client_id))
+      OPSMAN_CLIENT_SECRET: ((opsman_client_secret))
+      OPSMAN_DOMAIN_OR_IP_ADDRESS: ((opsman_domain_or_ip_address))

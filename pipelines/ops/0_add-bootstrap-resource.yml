@@ -1,0 +1,8 @@
+- op: add
+  path: /resources/-
+  value:
+    name: homelab
+    type: git
+    source:
+      uri: https://github.com/crdant/homelab.git
+      branch: master
