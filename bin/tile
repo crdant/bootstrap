@@ -12,8 +12,8 @@ parameter_file="${workdir}/${slug}-upgrade-params.yml"
 pipeline_file=${workdir}/pcf-pipelines/upgrade-tile/pipeline.yml
 
 
-opsman_username=$(pcf secret opsman_admin_username)
-opsman_password=$(pcf secret opsman_admin_password)
+opsman_username=$(pcf team_secret opsman_admin_username)
+opsman_password=$(pcf team_secret opsman_admin_password)
 
 download () {
   product_slug=${1}
@@ -51,18 +51,23 @@ pipeline () {
   product_name="$(unzip -p ${workdir}/${product_slug}/${release_version}/* "metadata/*.yml" | egrep "^name: (.+)" | cut -d" " -f 2)"
 
   cat <<PARAMS > ${parameter_file}
-  pivnet_token: ${PIVNET_TOKEN}
   product_version_regex: ^${base_version}\..*$
-  opsman_admin_username: ${opsman_username}
-  opsman_admin_password: ${opsman_password}
-  opsman_domain_or_ip_address: opsman.${pcf_subdomain}
-  iaas_type: google
+  opsman_client_id: ""
+  opsman_client_secret: ""
+  opsman_domain_or_ip_address: ${opsman_domain_or_ip_address}
+  iaas_type: ${iaas}
   product_slug: ${product_slug}
   product_name: ${product_name}
 PARAMS
 
+  modernize_pipeline
   fly --target ${concourse_target} set-pipeline --pipeline ${tile_upgrade_pipeline} \
     --config ${pipeline_file} --load-vars-from ${parameter_file}
+}
+
+modernize_pipeline() {
+  sed -i -e 's/{{/((/g' "${pipeline_file}"
+  sed -i -e 's/}}/))/g' "${pipeline_file}"
 }
 
 show_products () {

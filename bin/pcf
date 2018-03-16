@@ -10,12 +10,18 @@ concourse_target=${env_id}-${concourse_team}
 concourse_url=`concourse url`
 pcf_concourse_user=pivotal
 
-pcf_install_pipeline="deploy-pcf"
 pcf_pipelines_remote="https://github.com/pivotal-cf/pcf-pipelines.git"
 pcf_pipelines_local=${workdir}/pcf-pipelines
 pcf_pipelines_version="v0.23.0"
-pipeline_file="${workdir}/pcf-pipelines/install-pcf/gcp/pipeline.yml"
-parameter_file="${workdir}/${env_id}-${pcf_install_pipeline}-params.yml"
+
+pcf_install_pipeline="deploy-pcf"
+pcf_install_pipeline_file="${workdir}/pcf-pipelines/install-pcf/gcp/pipeline.yml"
+pcf_install_parameter_file="${workdir}/${env_id}-${pcf_install_pipeline}-params.yml"
+
+pcf_upgrade_pipeline="upgrade-pcf"
+pcf_upgrade_pipeline_file="${workdir}/pcf-pipelines/upgrade-tile/pipeline.yml"
+pcf_upgrade_parameter_file="${workdir}/${env_id}-${pcf_upgrade_pipeline}-params.yml"
+
 ops_dir=${BASEDIR}/pipelines/ops
 
 
@@ -30,7 +36,8 @@ terraform_statefile_bucket="${env_id}-bucket"
 mysql_backup_bucket=${short_id}-mysql-backups
 mysql_backup_schedule="0 0/72 * * *"
 
-secret_root="concourse/${concourse_team}/${pcf_install_pipeline}"
+team_secret_root="concourse/${concourse_team}"
+deploy_secret_root="concourse/${concourse_team}/${pcf_install_pipeline}"
 
 prepare_concourse() {
   safe_auth_bootstrap
@@ -88,20 +95,22 @@ download () {
 }
 
 modernize_pipeline() {
-  sed -i -e 's/{{/((/g' "${pipeline_file}"
-  sed -i -e 's/}}/))/g' "${pipeline_file}"
+  sed -i -e 's/{{/((/g' "${pcf_install_pipeline_file}"
+  sed -i -e 's/}}/))/g' "${pcf_install_pipeline_file}"
+  sed -i -e 's/{{/((/g' "${pcf_upgrade_pipeline_file}"
+  sed -i -e 's/}}/))/g' "${pcf_upgrade_pipeline_file}"
 }
 
 adapt_pipeline() {
   ops_file_args="$(find ${ops_dir}/*.yml | sort | sed 's/^/-o /' | xargs)"
-  cat "${pipeline_file}.orig" | yaml-patch ${ops_file_args} > ${pipeline_file}
+  cat "${pcf_install_pipeline_file}.orig" | yaml-patch ${ops_file_args} > ${pcf_install_pipeline_file}
 }
 
 safe_auth () {
   jq --raw-output '.auth.client_token' ${key_dir}/conrad-${env_id}-token.json | safe auth token
 }
 
-get_secret () {
+get_deploy_secret () {
   local secret="${1}"
 
   if  [ ${secret} == "concourse" ] ; then
@@ -111,7 +120,20 @@ get_secret () {
   fi
 
   safe_auth
-  safe get ${secret_root}/${secret}:value
+  safe get ${deploy_secret_root}/${secret}:value
+}
+
+get_team_secret () {
+  local secret="${1}"
+
+  if  [ ${secret} == "concourse" ] ; then
+    safe_auth_bootstrap
+    safe get secret/bootstrap/concourse/pivotal:value
+    return
+  fi
+
+  safe_auth
+  safe get ${team_secret_root}/${secret}:value
 }
 
 get_credential () {
@@ -121,7 +143,7 @@ get_credential () {
   if [ -z "${field}" ] ; then
     field="password"
   fi
-  credential=$(om -k --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/opsman_admin_username:value` --password `safe get ${secret_root}/opsman_admin_password:value` --skip-ssl-validation credentials --product-name ${product} --credential-reference ${credential} --credential-field ${field})
+  credential=$(om -k --target https://opsman.${pcf_subdomain} --username `safe get ${team_secret_root}/opsman_admin_username:value` --password `safe get ${team_secret_root}/opsman_admin_password:value` --skip-ssl-validation credentials --product-name ${product} --credential-reference ${credential} --credential-field ${field})
   echo $credential
 }
 
@@ -137,59 +159,61 @@ ssl_certificates () {
 secrets () {
   safe_auth
 
-  safe set ${secret_root}/gcp_service_account_key value="$(cat ${pcf_key_file})"
+  safe set ${team_secret_root}/gcp_service_account_key value="$(cat ${pcf_key_file})"
 
   # N.B. set these two on your own, No API for them
-  # safe set ${secret_root}/gcp_storage_access_key value=
-  # safe set ${secret_root}/gcp_storage_secret_key:
-  safe set ${secret_root}/git_private_key value="$(cat ${HOME}/.ssh/concourse_github)"
-  safe set ${secret_root}/pivnet_token value=${PIVNET_TOKEN}
-  safe set ${secret_root}/opsman_admin_username value=admin
-  safe gen ${secret_root}/opsman_admin_password value
+  # safe set ${deploy_secret_root}/gcp_storage_access_key value=
+  # safe set ${deploy_secret_root}/gcp_storage_secret_key:
+  safe set ${team_secret_root}/git_private_key value="$(cat ${HOME}/.ssh/concourse_github)"
+  safe set ${team_secret_root}/pivnet_token value=${PIVNET_TOKEN}
+  safe set ${team_secret_root}/opsman_admin_username value=admin
+  safe gen ${team_secret_root}/opsman_admin_password value
 
   # store the certificates we generated
   create_certificate ${pcf_subdomain} "${env-id} Cloud Foundry" \
     --domains "*.cfapps.${pcf_subdomain},*.login.sys.${pcf_subdomain},*.uaa.sys.${pcf_subdomain},*.sys.${pcf_subdomain}"
 
-  safe set ${secret_root}/pcf_opsman_trusted_certs value="$(cat ${ca_cert_file})"
-  safe set ${secret_root}/pcf_ert_ssl_cert value="$(cat ${ca_dir}/${pcf_subdomain}.crt)"
-  safe set ${secret_root}/pcf_ert_ssl_key value="$(cat ${ca_dir}/${pcf_subdomain}.key)"
+  safe set ${deploy_secret_root}/pcf_opsman_trusted_certs value="$(cat ${ca_cert_file})"
+  safe set ${deploy_secret_root}/pcf_ert_ssl_cert value="$(cat ${ca_dir}/${pcf_subdomain}.crt)"
+  safe set ${deploy_secret_root}/pcf_ert_ssl_key value="$(cat ${ca_dir}/${pcf_subdomain}.key)"
 
   # credhub
   safe set /concourse/pcf/deploy-pcf/credhub_encryption_keys \
     value="[{ name: default, provider: internal, primary: true, key: { secret: $( generate_passphrase 6 | gmd5sum | awk '{ print $1 }') } }]"
-    
+
   # Usernames must be 16 characters or fewer
-  safe set ${secret_root}/db_diego_username value=pcf-diego
-  safe gen ${secret_root}/db_diego_password value
-  safe set ${secret_root}/db_notifications_username value=pcf-notification
-  safe gen ${secret_root}/db_notifications_password value
-  safe set ${secret_root}/db_autoscale_username value=pcf-autoscale
-  safe gen ${secret_root}/db_autoscale_password value
-  safe set ${secret_root}/db_uaa_username value=uaa
-  safe gen ${secret_root}/db_uaa_password value
-  safe set ${secret_root}/db_app_usage_service_username value=pcf-app-usage
-  safe gen ${secret_root}/db_app_usage_service_password value
-  safe set ${secret_root}/db_ccdb_username value=pcf-ccdb
-  safe gen ${secret_root}/db_ccdb_password value
-  safe set ${secret_root}/db_routing_username value=pcf-routing
-  safe gen ${secret_root}/db_routing_password value
+  safe set ${deploy_secret_root}/db_diego_username value=pcf-diego
+  safe gen ${deploy_secret_root}/db_diego_password value
+  safe set ${deploy_secret_root}/db_notifications_username value=pcf-notification
+  safe gen ${deploy_secret_root}/db_notifications_password value
+  safe set ${deploy_secret_root}/db_autoscale_username value=pcf-autoscale
+  safe gen ${deploy_secret_root}/db_autoscale_password value
+  safe set ${deploy_secret_root}/db_uaa_username value=uaa
+  safe gen ${deploy_secret_root}/db_uaa_password value
+  safe set ${deploy_secret_root}/db_app_usage_service_username value=pcf-app-usage
+  safe gen ${deploy_secret_root}/db_app_usage_service_password value
+  safe set ${deploy_secret_root}/db_ccdb_username value=pcf-ccdb
+  safe gen ${deploy_secret_root}/db_ccdb_password value
+  safe set ${deploy_secret_root}/db_routing_username value=pcf-routing
+  safe gen ${deploy_secret_root}/db_routing_password value
 
-  safe set ${secret_root}/db_accountdb_username value=pcf-accounts
-  safe gen ${secret_root}/db_accountdb_password value
-  safe set ${secret_root}/db_networkpolicyserverdb_username value=pcf-policy
-  safe gen ${secret_root}/db_networkpolicyserverdb_password value
-  safe set ${secret_root}/db_nfsvolumedb_username value=pcf-nfs
-  safe gen ${secret_root}/db_nfsvolumedb_password value
-  safe set ${secret_root}/db_silk_username value=pcf-silk
-  safe gen ${secret_root}/db_silk_password value
-  safe set ${secret_root}/db_locket_username value=pcf-locket
-  safe gen ${secret_root}/db_locket_password value
+  safe set ${deploy_secret_root}/db_accountdb_username value=pcf-accounts
+  safe gen ${deploy_secret_root}/db_accountdb_password value
+  safe set ${deploy_secret_root}/db_networkpolicyserverdb_username value=pcf-policy
+  safe gen ${deploy_secret_root}/db_networkpolicyserverdb_password value
+  safe set ${deploy_secret_root}/db_nfsvolumedb_username value=pcf-nfs
+  safe gen ${deploy_secret_root}/db_nfsvolumedb_password value
+  safe set ${deploy_secret_root}/db_silk_username value=pcf-silk
+  safe gen ${deploy_secret_root}/db_silk_password value
+  safe set ${deploy_secret_root}/db_locket_username value=pcf-locket
+  safe gen ${deploy_secret_root}/db_locket_password value
 
+  safe set ${deploy_secret_root}/db_credhub_username value=pcf-credhub
+  safe gen ${deploy_secret_root}/db_credhub_password value
 }
 
 params() {
-  cat <<PARAMS > ${parameter_file}
+  cat <<PARAMS > ${pcf_install_parameter_file}
 
   # GCP project to create the infrastructure in
   gcp_project_id: ${project}
@@ -260,13 +284,27 @@ params() {
   mysql_backups_scp_server:
   mysql_backups_scp_user:
 PARAMS
+
+  cat <<PARAMS > ${pcf_upgrade_parameter_file}
+  product_version_regex: ^2\.1\..*$
+  opsman_client_id: ""
+  opsman_client_secret: ""
+  opsman_domain_or_ip_address: ${opsman_domain_or_ip_address}
+  iaas_type: ${iaas}
+  product_slug: "elastic-runtime"
+  product_globs: "*pivotal"
+PARAMS
+
 }
 
 pipeline () {
   concourse_login
   fly --target ${concourse_target} set-pipeline --pipeline ${pcf_install_pipeline} \
-    --config ${pipeline_file} --load-vars-from ${parameter_file}
+    --config ${pcf_install_pipeline_file} --load-vars-from ${pcf_install_parameter_file}
   fly --target ${concourse_target} unpause-pipeline --pipeline ${pcf_install_pipeline}
+
+  fly --target ${concourse_target} set-pipeline --pipeline ${pcf_upgrade_pipeline} \
+  --config ${pcf_upgrade_pipeline_file} --load-vars-from ${pcf_upgrade_parameter_file}
 }
 
 trigger() {
@@ -339,8 +377,8 @@ ldap () {
   pcf_bind_password=`generate_passphrase 4`
 
   safe_auth
-  safe set ${secret_root}/uaa_ldap_username value=${pcf_bindDN}
-  safe set ${secret_root}/uaa_ldap_password value=${pcf_bind_password}
+  safe set ${deploy_secret_root}/uaa_ldap_username value=${pcf_bindDN}
+  safe set ${deploy_secret_root}/uaa_ldap_password value=${pcf_bind_password}
 
   pcf_bind_password_enc=`echo {SHA}$(echo -n ${pcf_bind_password} | openssl sha -sha256 -binary) | base64`
   LDAPTLS_REQCERT=never ldapadd -H `ldap tunnel_url` -D ${ldap_admin_bindDN} -w ${ldap_admin_password} -f <(
@@ -434,8 +472,8 @@ LDIF
       '
   )
 
-  om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/opsman_admin_username:value` \
-      --password `safe get ${secret_root}/opsman_admin_password:value` --skip-ssl-validation \
+  om --target https://opsman.${pcf_subdomain} --username `safe get ${team_secret_root}/opsman_admin_username:value` \
+      --password `safe get ${team_secret_root}/opsman_admin_password:value` --skip-ssl-validation \
     configure-product --product-name cf --product-properties "$ldap_properties"
 }
 
@@ -469,8 +507,8 @@ opsman_exec () {
 
 exec_om () {
   safe_auth > /dev/null 2>&1
-  exec om --target https://opsman.${pcf_subdomain} --username `safe get ${secret_root}/opsman_admin_username:value` \
-      --password `safe get ${secret_root}/opsman_admin_password:value` --skip-ssl-validation $@
+  exec om --target https://opsman.${pcf_subdomain} --username `safe get ${team_secret_root}/opsman_admin_username:value` \
+      --password `safe get ${team_secret_root}/opsman_admin_password:value` --skip-ssl-validation $@
 }
 
 tunnel () {
@@ -588,7 +626,11 @@ if [ $# -gt 0 ]; then
         safe_auth
         ;;
       get_secret | password | secret)
-        get_secret "${2}"
+        get_deploy_secret "${2}"
+        shift
+        ;;
+      team_secret)
+        get_team_secret "${2}"
         shift
         ;;
       get_credential | credential)
