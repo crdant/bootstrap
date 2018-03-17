@@ -24,14 +24,8 @@ workdir="${BASEDIR}/work"
 etc_dir="${BASEDIR}/etc"
 manifest_dir="${BASEDIR}/manifests"
 
-# CA configuration
-ca_dir=${key_dir}/CA
-ca_name="${domain} Certificate Authority"
-ca_cert_file=${ca_dir}/`echo ${ca_name} | tr ' ' '_'`.crt
-country="US"
-state="MA"
-city="Cambridge"
-organization="${domain}"
+# certificate configuration
+certbot_dir=/usr/local/etc/certbot
 
 if [ -f "${state_dir}/bbl-state.json" ] ; then
   jumpbox=`bbl jumpbox-address --state-dir ${state_dir} --gcp-service-account-key "${key_file}" | cut -d':' -f1 `

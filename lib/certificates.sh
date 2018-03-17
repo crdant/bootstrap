@@ -1,48 +1,39 @@
 create_certificate () {
-  local common_name=${1}
-  local org_unit=${2}
+  local certificate_name=${1}
+  shift
 
-  request_certificate "${common_name}" "${org_unit}"
-  sign_certificate "${common_name}"
+  request_certificate "${certificate_name}" $*
+  # sign_certificate "${common_name}"
 }
 
 request_certificate () {
   local common_name=${1}
-  local org_unit=${2}
-  shift 2
+  shift
+
+  local log_dir=${workdir}/logs
 
   local address_args=
   if [ $# -gt 0 ]; then
     while [ $# -gt 0 ]; do
       case $1 in
-        domains )
-          domains="${2}"
-          shift
+        --domain )
+          address_args="${address_args} --domain \"${2}\""
+          shift 2
           ;;
-        ip )
-          address_args="${extra_args} --ip ${2}"
+        --ip )
+          address_args="${address_args} --domain \"${2}\""
+          shift 2
           ;;
         * )
           echo "Unrecognized option: $1" 1>&2
           exit 1
           ;;
       esac
-      shift
     done
   fi
 
-  if [ -z "${domains}" ] ; then
-    address_args="${address_args} --domain ${common_name}"
-  else
-    address_args="${address_args} --domain ${common_name},$domains"
-  fi
-
-  certstrap --depot-path ${ca_dir} request-cert --common-name ${common_name} ${address_args} \
-    --country ${country} --province ${state} --locality ${city} \
-    --organization ${organization} --organizational-unit ${org_unit}
-}
-
-sign_certificate () {
-  local common_name=${1}
-  certstrap --depot-path ${ca_dir} sign ${common_name} --CA "${ca_name}"
+  certbot certonly --server https://acme-v02.api.letsencrypt.org/directory \
+    --cert-name "${common_name}" ${address_args} \
+    --dns-google --dns-google-credentials ${key_file} --dns-google-propagation-seconds 120 \
+    --config-dir ${certbot_dir} --logs-dir ${log_dir} --work-dir ${key_dir}/certbot
 }

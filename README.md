@@ -53,13 +53,13 @@ Homebrew, so Mac users can run `brew install cloudfoundry/tap/bbl`.
 2. [Safe](https://github.com/starkandwayne/safe). On a Mac you can run `brew install starkandwayne/cf/safe`.
 3. Hashicorp [Vault CLI](https://www.vaultproject.io). If you're on a Mac run `brew install vault`.
 4. The [Pivotal Network](https://network.pivotal.io) CLI, [`pivnet`](https://github.com/pivotal-cf/pivnet-cli). Again, with Homebrew `brew install pivotal/tap/pivotal-cli`.
-5. [Certstrap](https://github.com/square/certstrap) to bootstrap a CA. Install with `brew install certstrap`.
+5. [Certbot](https://github.com/certbot/certbot) to get certificates from Let's Encrypt. Install with `brew install certbot`.
 
 ## Coming soon
 
 1. Deploy concourse with standard manifest plus ops files from [concourse-deployment](https://github.com/concourse/concourse-deployment)
 1. Use `yaml-patch` to edit the cloud config to make changes more idempotent.
-1. Use the Credhub (created by `bbl` or standalone) instead of deploying/managing vault.
+1. Use Credhub (created by `bbl` or standalone) instead of deploying/managing vault.
 1. Windows in PCF and concourse
 1. PCF tile support
 1. Split working directory from script directory to simplify having local changes

@@ -20,9 +20,8 @@ ssl_certificates () {
   echo "Creating SSL certificate..."
 
   common_name="${ldap_host}"
-  org_unit="${env_id} Directory Services"
 
-  create_certificate ${common_name} ${org_unit} --ips ${ldap_static_ip}
+  create_certificate ${common_name} --ip ${ldap_static_ip}
 }
 
 stemcell () {

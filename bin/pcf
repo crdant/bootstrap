@@ -153,6 +153,7 @@ ssl_certificates () {
   common_name="${pcf_subdomain}"
   org_unit="Continuous Delivery"
 
+  request_certificate ${common_name} ${org_unit} --domain
   echo "SSL certificate for ERT created and stored at ${ca_dir}/${common_name}.crt, private key stored at ${ca_dir}/${common_name}.key."
 }
 
@@ -170,12 +171,12 @@ secrets () {
   safe gen ${team_secret_root}/opsman_admin_password value
 
   # store the certificates we generated
-  create_certificate ${pcf_subdomain} "${env-id} Cloud Foundry" \
-    --domains "*.cfapps.${pcf_subdomain},*.login.sys.${pcf_subdomain},*.uaa.sys.${pcf_subdomain},*.sys.${pcf_subdomain}"
+  create_certificate "${env_id} Cloud Foundry" \
+    --domain "${pcf_subdomain}" --domain "*.cfapps.${pcf_subdomain}" --domain "*.login.sys.${pcf_subdomain}" \
+    --domain "*.uaa.sys.${pcf_subdomain}" --domain "*.sys.${pcf_subdomain}"
 
-  safe set ${deploy_secret_root}/pcf_opsman_trusted_certs value="$(cat ${ca_cert_file})"
-  safe set ${deploy_secret_root}/pcf_ert_ssl_cert value="$(cat ${ca_dir}/${pcf_subdomain}.crt)"
-  safe set ${deploy_secret_root}/pcf_ert_ssl_key value="$(cat ${ca_dir}/${pcf_subdomain}.key)"
+  safe set ${deploy_secret_root}/pcf_ert_ssl_cert value="$(cat ${certbot_dir}/live/${env_id}\ Cloud\ Foundry/cert.pem)"
+  safe set ${deploy_secret_root}/pcf_ert_ssl_key value="$(cat ${certbot_dir}/live/${env_id}\ Cloud\ Foundry/privkey.pem)"
 
   # credhub
   safe set /concourse/pcf/deploy-pcf/credhub_encryption_keys \

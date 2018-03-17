@@ -27,8 +27,7 @@ ssl_certificates () {
   echo "Creating SSL certificate..."
 
   common_name="${concourse_cert_cn}"
-  org_unit="Continuous Delivery"
-  create_certificate "${common_name}" "${org_unit}"
+  create_certificate "${common_name}" 
 
   echo "SSL certificate created and stored at ${ca_dir}/${common_name}.crt, private key stored at ${ca_dir}/${common_name}.key."
 }
