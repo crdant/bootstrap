@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+BASEDIR=$(dirname $(dirname $0))
+. "${BASEDIR}/lib/env.sh"
+. "${BASEDIR}/lib/secrets.sh"
+. "${BASEDIR}/lib/generate_passphrase.sh"
+. "${BASEDIR}/lib/certificates.sh"
+
+wildcard_domain="*.pks.pcf.${subdomain}"
+pcf_dns_zone="pcf-${short_id}-zone"
+api_load_balancer_name="pcf-${short_id}-pks-api-router"
+
+security () {
+  echo "Creating services accounts and SSH keys..."
+
+  service_account_name="pks-${short_id}"
+  service_account="${service_account_name}@${project}.iam.gserviceaccount.com"
+
+  gcloud iam service-accounts --project "${project}" create "${service_account_name}" --display-name "PKS Bootstraped by BOSH Boot Loader (bbl) and Concourse" --no-user-output-enabled
+  gcloud iam service-accounts --project "${project}" keys create "${key_dir}/${project}-pks-deployment-${short_id}.json" --iam-account "${service_account}" --no-user-output-enabled
+
+  gcloud projects add-iam-policy-binding ${project} --member "serviceAccount:${service_account}" --role "roles/editor" --no-user-output-enabled
+  gcloud projects add-iam-policy-binding ${project} --member "serviceAccount:${service_account}" --role "roles/iam.serviceAccountActor" --no-user-output-enabled
+  gcloud projects add-iam-policy-binding ${project} --member "serviceAccount:${service_account}" --role "roles/compute.instanceAdmin" --no-user-output-enabled
+  gcloud projects add-iam-policy-binding ${project} --member "serviceAccount:${service_account}" --role "roles/compute.networkAdmin" --no-user-output-enabled
+  gcloud projects add-iam-policy-binding ${project} --member "serviceAccount:${service_account}" --role "roles/compute.storageAdmin" --no-user-output-enabled
+  gcloud projects add-iam-policy-binding ${project} --member "serviceAccount:${service_account}" --role "roles/storage.admin" --no-user-output-enabled
+
+  echo "Created service account ${service_account}..."
+}
+
+firewall_rules () {
+  gcloud compute --project "${project}" firewall-rules create "pcf-${short_id}-allow-pks-api" --allow "tcp:8443,tcp:9021" --description "Enable traffic PKS API " --network "pcf-${short_id}-virt-net" --source-ranges "0.0.0.0/0" --target-tags "${api_load_balancer_name}" --no-user-output-enabled
+  gcloud compute firewall-rules create pks-${short_id}-allow-cluster --direction=INGRESS --priority=1000 --network=pcf-${short_id}-virt-net --action=ALLOW --rules=tcp:8443 --source-ranges=0.0.0.0/0 --target-tags=master
+}
+
+load_balancers () {
+  echo "Creating load balancer for the the PKS API..."
+
+  gcloud compute --project "${project}" addresses create "${api_load_balancer_name}" --region "${region}" --no-user-output-enabled
+  gcloud compute --project "${project}" target-pools create "${api_load_balancer_name}" --description "Target pool for load balancing web access to PCF instances" --region "${region}" --session-affinity "NONE" --no-user-output-enabled
+  gcloud compute --project "${project}" forwarding-rules create "${api_load_balancer_name}-uaa" --description "Forwarding rule for load balancing PKS UAA access" --region "${region}" --address "https://www.googleapis.com/compute/v1/projects/${project}/regions/${region}/addresses/${api_load_balancer_name}" --ip-protocol "TCP" --ports 8443 --target-pool "${api_load_balancer_name}" --no-user-output-enabled
+  gcloud compute --project "${project}" forwarding-rules create "${api_load_balancer_name}-api" --description "Forwarding rule for load balancing PKS API access" --region "${region}" --address "https://www.googleapis.com/compute/v1/projects/${project}/regions/${region}/addresses/${api_load_balancer_name}" --ip-protocol "TCP" --ports 9021 --target-pool "${api_load_balancer_name}" --no-user-output-enabled
+
+  echo "You will need the following values to configure the PKS tile in Operations Managers"
+  echo "  Load balancers for Pivotal Container Service: tcp:${api_load_balancer_name}"
+}
+
+dns() {
+  set_dns "${wildcard_domain}" "${api_load_balancer_name}"
+}
+
+set_dns() {
+  dns_name=${1}
+  address_name=${2}
+
+  gcloud beta dns record-sets transaction start -z "${pcf_dns_zone}" --transaction-file="${workdir}/dns-transaction-pks-${pcf_dns_zone}.xml" --no-user-output-enabled
+
+  # HTTP/S router
+  dns_address=`gcloud compute --project "${project}" --format json addresses describe ${address_name} --region ${region}  | jq --raw-output ".address"`
+  gcloud beta dns record-sets transaction add -z "${pcf_dns_zone}" --name ${dns_name} --ttl "${dns_ttl}" --type A "${dns_address}" --transaction-file="${workdir}/dns-transaction-pks-${pcf_dns_zone}.xml" --no-user-output-enabled
+  gcloud beta dns record-sets transaction execute -z "${pcf_dns_zone}" --transaction-file="${workdir}/dns-transaction-pks-${pcf_dns_zone}.xml" --no-user-output-enabled
+  echo "DNS entries configured: ${dns_name} -> ${dns_address}"
+}
+
+create_cluster() {
+  name=${1}
+
+  cluster_name=${name}-cluster
+  dns_name=${name}.pks.pcf.bbl.gcp.crdant.io
+
+  # create the cluster
+  pks create-cluster ${name}-cluster --plan small --external-hostname ${dns_name}
+  uuid="$(pks cluster riff-cluster --json | jq --raw-output '.uuid')"
+
+  gcloud compute addresses create pks-${short_id}-${cluster_name} --region ${region}
+  gcloud compute target-pools create pks-${short_id}-${cluster_name} --region ${region}
+
+  # get the master instance from the cluster we created - N.B. Assuming one right now, not a safe assumption
+  # TO DO: fix for multiple
+  gcloud compute instances list --filter="labels.job:master AND labels.deployment:service-instance-${uuid}" --format=json | jq --raw-output '.[].name'
+
+  gcloud compute target-pools add-instances pks-${short_id}-${cluster_name} --instances ${master_instance} --instances-zone ${region}-f
+  gcloud compute forwarding-rules create pks-${short_id}-${cluster_name} --region ${region} --ports 8443 --address pks-${short_id}-${cluster_name} --target-pool pks-${short_id}-${cluster_name}
+
+  set_dns ${dns_name} pks-${short_id}-${cluster_name}
+
+  pks get-credentials ${cluster_name}
+}
+
+if [ $# -gt 0 ]; then
+  while [ $# -gt 0 ]; do
+    case $1 in
+      security)
+        security
+        ;;
+      load_balancers | lbs | balancers)
+        load_balancers
+        ;;
+      dns)
+        dns
+        ;;
+      firewall | rules | firewall_rules)
+        firewall_rules
+        ;;
+      create-cluster)
+        cluster_name=${2}
+        shift
+        create_cluster ${cluster_name}
+      * )
+        echo "Unrecognized option: $1" 1>&2
+        exit 1
+        ;;
+    esac
+    shift
+    exit
+  done
+fi
+
+security
+load_balancers
+dns
+firewall_rules
