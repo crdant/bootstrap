@@ -71,10 +71,6 @@ login() {
   bosh log-in -e `bbl env-id --state-dir ${state_dir} --gcp-service-account-key "${key_file}"` --client="${BOSH_CLIENT}" --client-secret="${BOSH_CLIENT_SECRET}"
 }
 
-trust () {
-  security add-trusted-cert -d -p ssl -k ${HOME}/Library/Keychains/login.keychain ${ca_cert_file}
-}
-
 if [ $# -gt 0 ]; then
   while [ $# -gt 0 ]; do
     case $1 in
