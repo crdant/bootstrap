@@ -18,7 +18,6 @@ fi
 
 director() {
   echo "Creating the $env_id BOSH director..."
-  env | grep "BBL"
   bbl up --state-dir ${state_dir}
   env_id=$(bbl env-id --state-dir ${state_dir})
   firewall
