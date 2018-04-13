@@ -23,7 +23,7 @@ POLICY
 )"
 
   aws iam create-policy --policy-name ${env_id}-policy --policy-document "${aws_iam_policy}" > ${iam_policy_file}
-  policy_arn="$(cat ${workdir}/aws_iam_policy.json | jq --raw-output '.Policy.Arn' )"
+  policy_arn="$(cat ${iam_policy_file} | jq --raw-output '.Policy.Arn' )"
 }
 
 iam_accounts() {
