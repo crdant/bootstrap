@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 BASEDIR=$(dirname $(dirname $0))
 . "${BASEDIR}/lib/env.sh"
+. "${BASEDIR}/lib/${iaas}/prepare.sh"
 set -e
 
 if [ ! -d ${workdir} ] ; then
@@ -15,41 +16,18 @@ if [ ! -d ${state_dir} ] ; then
   mkdir -p ${state_dir}
 fi
 
-service_accounts() {
-  echo "Configuring service accounts..."
-  gcloud iam service-accounts --project "${project}" create "${service_account_name}" --display-name "BOSH Boot Loader (bbl)" --no-user-output-enabled
-  gcloud iam service-accounts --project "${project}" keys create "${key_file}"  --iam-account "${service_account}" --no-user-output-enabled
-  chmod 600 ${key_file}
-  gcloud projects add-iam-policy-binding "${project}" --member "serviceAccount:${service_account}" --role "roles/editor" --no-user-output-enabled
-}
-
 director() {
   echo "Creating the $env_id BOSH director..."
-  bbl up --state-dir ${state_dir} --iaas gcp --gcp-service-account-key "${key_file}" --gcp-region "${region}"
-  env_id=`bbl env-id --state-dir ${state_dir} --gcp-service-account-key "${key_file}"`
+  env | grep "BBL"
+  bbl up --state-dir ${state_dir}
+  env_id=$(bbl env-id --state-dir ${state_dir})
   firewall
-}
-
-firewall() {
-  # add missing firewall rule to allow jumpbox to tunnel to all BOSH managed vms -- needed for BOSH ssh among other things
-  env_id=`bbl env-id --state-dir ${state_dir} --gcp-service-account-key "${key_file}"`
-  gcloud --project "${project}" compute firewall-rules update ${env_id}-bosh-open --target-tags=${env_id}-bosh-director,${env_id}-internal
-}
-
-dns () {
-  # TODO: move this to prepare.sh
-  gcloud dns managed-zones --project ${project} create ${dns_zone} --dns-name "${subdomain}." --description "Zone for ${subdomain}"
-
-  # TO DO: put this in here like in https://github.com/crdant/pcf-on-gcp
-  # update_root_dns
-  # echo "Waiting for ${DNS_TTL} seconds for the Root DNS to sync up..."
-  # sleep "${DNS_TTL}"
 }
 
 client() {
   echo "Configuring BOSH client for the $env_id director..."
   # can't reuse bbl print-env --state-dir ${state_dir} without redoing the tunnel (with new port), so be aware of that by saving the variable setting
-  bbl_env=`bbl print-env --state-dir ${state_dir} --gcp-service-account-key "${key_file}"`
+  bbl_env=$(bbl print-env --state-dir ${state_dir})
   echo "${bbl_env}" | sed '/ssh/ d' > ${workdir}/bbl-env.sh
   chmod 755 ${workdir}/bbl-env.sh
   eval "$bbl_env"
@@ -57,25 +35,25 @@ client() {
   if [ -f ${key_dir}/id_jumpbox_${env_id}.pem ] ; then
     chmod 600 ${key_dir}/id_jumpbox_${env_id}.pem
   fi
-  bbl ssh-key --state-dir ${state_dir} --gcp-service-account-key "${key_file}" > ${key_dir}/id_jumpbox_${env_id}.pem
+  bbl ssh-key --state-dir ${state_dir} > ${key_dir}/id_jumpbox_${env_id}.pem
   chmod 400 ${key_dir}/id_jumpbox_${env_id}.pem
 
-  bosh_ca_cert=`bbl director-ca-cert --state-dir ${state_dir} --gcp-service-account-key "${key_file}"`
-  bosh_director_address=`bbl director-address --state-dir ${state_dir} --gcp-service-account-key "${key_file}"`
-  bosh alias-env --environment="${bosh_director_address}" --ca-cert="${bosh_ca_cert}" `bbl env-id --state-dir ${state_dir} --gcp-service-account-key "${key_file}"`
+  bosh_ca_cert=$(bbl director-ca-cert --state-dir ${state_dir})
+  bosh_director_address=$(bbl director-address --state-dir ${state_dir})
+  bosh alias-env --environment="${bosh_director_address}" --ca-cert="${bosh_ca_cert}" $(bbl env-id --state-dir ${state_dir})
 }
 
 login() {
   echo "Logging into the $env_id director..."
   . "${workdir}/bbl-env.sh"
-  bosh log-in -e `bbl env-id --state-dir ${state_dir} --gcp-service-account-key "${key_file}"` --client="${BOSH_CLIENT}" --client-secret="${BOSH_CLIENT_SECRET}"
+  bosh log-in -e $(bbl env-id --state-dir ${state_dir}) --client="${BOSH_CLIENT}" --client-secret="${BOSH_CLIENT_SECRET}"
 }
 
 if [ $# -gt 0 ]; then
   while [ $# -gt 0 ]; do
     case $1 in
       accounts )
-        service_accounts
+        iam_accounts
         ;;
       dns )
         dns
@@ -105,7 +83,7 @@ if [ $# -gt 0 ]; then
   exit
 fi
 
-service_accounts
+iam_accounts
 director
 dns
 client
