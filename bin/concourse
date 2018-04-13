@@ -27,7 +27,7 @@ ssl_certificates () {
   echo "Creating SSL certificate..."
 
   common_name="${concourse_cert_cn}"
-  create_certificate "${common_name}" 
+  create_certificate "${common_name}"
 
   echo "SSL certificate created and stored at ${ca_dir}/${common_name}.crt, private key stored at ${ca_dir}/${common_name}.key."
 }
@@ -71,7 +71,7 @@ deploy () {
 
 lbs () {
   echo "Configuring load balancers..."
-  bbl create-lbs --debug --state-dir ${state_dir} --type concourse --cert ${lb_cert_file} --key ${lb_key_file} --gcp-service-account-key "${key_file}"
+  bbl create-lbs --debug --state-dir ${state_dir} --type concourse --cert ${lb_cert_file} --key ${lb_key_file}
 }
 
 dns() {
@@ -122,7 +122,7 @@ teardown () {
   gcloud dns record-sets --project ${project} transaction remove -z "${dns_zone}" --name "${concourse_host}" --ttl "${dns_ttl}" --type A "${lb_address}" --transaction-file="${transaction_file}"
   gcloud dns record-sets --project ${project} transaction execute -z "${dns_zone}" --transaction-file="${transaction_file}"
 
-  bbl delete-lbs --gcp-service-account-key "${key_file}"
+  bbl delete-lbs
 }
 
 
