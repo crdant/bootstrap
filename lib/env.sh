@@ -1,7 +1,7 @@
 account=cdantonio@pivotal.io
 email=${account}
 domain=crdant.io
-iaas=gcp
+iaas=aws
 
 domain_token=`echo ${domain} | tr . -`
 subdomain="bbl.${iaas}.${domain}"
