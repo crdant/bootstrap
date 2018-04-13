@@ -5,6 +5,8 @@ availability_zone_3="${region}d"
 
 iam_account_name=`echo ${subdomain} | tr . -`
 key_file="${key_dir}/${iam_account_name}-access-key.json"
+iam_policy_file="${workdir}/${env_id}-iam-policy.json"
+dns_zone_file="${workdir}/${env_id}-dns-zone.json"
 
 if [ -f ${key_file} ] ; then
   access_key_id=$(cat ${key_file} | jq --raw-output '.AccessKey.AccessKeyId')

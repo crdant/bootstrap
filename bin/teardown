@@ -10,15 +10,20 @@ director() {
 }
 
 cleanup() {
-  chmod 600 ${key_dir}/id_jumpbox_${env_id}.pem
+  if [ -f ${key_dir}/id_jumpbox_${env_id}.pem ] ; then
+    chmod 600 ${key_dir}/id_jumpbox_${env_id}.pem
+  fi
   rm -rf ${key_dir}/*
   rm -rf ${workdir}/*
-  rm bbl-state.json
+  rm -rf ${state_dir}/*
 }
 
 if [ $# -gt 0 ]; then
   while [ $# -gt 0 ]; do
     case $1 in
+      dns )
+        dns
+        ;;
       director )
         director
         ;;
@@ -38,6 +43,7 @@ if [ $# -gt 0 ]; then
   done
 fi
 
+dns
 director
 iam_accounts
 cleanup
