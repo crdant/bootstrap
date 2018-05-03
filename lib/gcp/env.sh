@@ -1,5 +1,6 @@
 project=fe-cdantonio
 
+stemcell_iaas="google-kvm"
 region="us-east4"
 storage_location="us"
 availability_zone_1="${region}-f"
