@@ -1,0 +1,7 @@
+- type: replace
+  path: /vm_extensions/-
+  value:
+    cloud_properties:
+      security_groups:
+        - ((security-group-id))
+    name: ((job))-security-group
