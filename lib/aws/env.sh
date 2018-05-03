@@ -1,3 +1,5 @@
+stemcell_iaas="aws-xen-hvm"
+
 region="us-west-2"
 availability_zone_1="${region}b"
 availability_zone_2="${region}c"
