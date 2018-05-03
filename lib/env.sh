@@ -10,12 +10,14 @@ subdomain_token=`echo ${subdomain} | tr . -`
 lib_dir="${BASEDIR}/lib"
 state_dir="${BASEDIR}/state"
 key_dir="${BASEDIR}/keys"
+key_dir="${BASEDIR}/keys"
 workdir="${BASEDIR}/work"
 etc_dir="${BASEDIR}/etc"
 manifest_dir="${BASEDIR}/manifests"
 
 # certificate configuration
 certbot_dir=/usr/local/etc/certbot
+ca_dir=${certbot_dir}/live
 
 . ${lib_dir}/${iaas}/env.sh
 . ${lib_dir}/${iaas}/bbl_env.sh
