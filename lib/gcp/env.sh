@@ -10,3 +10,5 @@ availability_zone_3="${region}-b"
 service_account_name=`echo ${subdomain} | tr . -`
 service_account="${service_account_name}@${project}.iam.gserviceaccount.com"
 key_file="${key_dir}/${project}-${service_account_name}.json"
+
+certbot_dns_args="--dns-google --dns-google-credentials ${key_file} --dns-google-propagation-seconds 120"

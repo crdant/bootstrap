@@ -5,6 +5,7 @@ iaas=aws
 
 domain_token=`echo ${domain} | tr . -`
 subdomain="bbl.${iaas}.${domain}"
+subdomain_token=`echo ${subdomain} | tr . -`
 
 lib_dir="${BASEDIR}/lib"
 state_dir="${BASEDIR}/state"
@@ -24,7 +25,7 @@ if [ -f "${state_dir}/bbl-state.json" ] ; then
   env_id=`bbl env-id --state-dir ${state_dir}`
   short_id=`bbl env-id --state-dir ${state_dir} | sed s/bbl-env-// | cut -dt -f1`
 else
-  env_id=`echo ${subdomain} | tr . -`
+  env_id=${subdomain_token}
 fi
 
 dns_zone=`echo ${subdomain} | tr . -`
