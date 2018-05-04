@@ -27,6 +27,6 @@ if [ -f ${dns_zone_file} ]; then
 fi
 
 if [ -f ${cloud_config_vars_file} ] ; then
-  cloud_config_vars="$(sed -e 's/:[^:\/\/]/="/g;s/$/"/g;s/ *=/=/g' ${cloud_config_vars_file} | grep "^vpc_id\|^subnet_id\|^az._subnet")"
+  cloud_config_vars="$(sed -e 's/:[^:\/\/]/="/g;s/$/"/g;s/ *=/=/g' ${cloud_config_vars_file} | grep "^vpc_id\|^subnet_id\|^az._subnet\|^internal_security_group")"
   eval "${cloud_config_vars}"
 fi

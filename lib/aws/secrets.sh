@@ -54,7 +54,7 @@ firewall() {
   vault_security_group_id="$(cat ${vault_security_group_file} | jq --raw-output '.GroupId')"
   aws ec2 authorize-security-group-ingress --group-id "${vault_security_group_id}" --region ${region} --protocol tcp --port ${vault_port} --cidr ${vault_access_cidr}
   bosh -e ${env_id} cloud-config |
-    bosh interpolate -o etc/aws/add-security-group.yml -v security-group-id="${vault_security_group_id}" -v job="vault" - |
+    bosh interpolate -o etc/aws/add-security-group.yml -v internal-security-group="${internal_security_group}" -v security-group-id="${vault_security_group_id}" -v job="vault" - |
     bosh -n -e ${env_id} update-cloud-config -
 }
 
