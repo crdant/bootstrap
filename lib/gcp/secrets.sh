@@ -5,6 +5,9 @@ lbs () {
   gcloud compute --project "${project}" addresses create "${address_name}" --region "${region}" --no-user-output-enabled
   gcloud compute --project "${project}" target-pools create "${load_balancer_name}" --description "Target pool for load balancing Vault access" --region "${region}" --no-user-output-enabled
   gcloud compute --project "${project}" forwarding-rules create "${load_balancer_name}" --description "Forwarding rule for load balancing Vault access." --region "${region}" --address "https://www.googleapis.com/compute/v1/projects/${project}/regions/${region}/addresses/${address_name}" --ip-protocol "TCP" --ports "8200" --target-pool "${load_balancer_name}" --no-user-output-enabled
+  bosh interpolate \
+    -v env-id="${env_id}" \
+    -v job="vault"  etc/${iaas}/add-target-pool.yml > ${state_dir}/cloud-config/add-vault-target-pool.yml
 }
 
 dns () {

@@ -18,7 +18,6 @@ instance_groups:
   vm_type:  small
   vm_extensions:
     - vault-lb
-    - vault-security-groups
   stemcell: trusty
   azs: [z1]
   jobs:

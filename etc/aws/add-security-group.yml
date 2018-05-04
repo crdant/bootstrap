@@ -1,8 +1,7 @@
 - type: replace
-  path: /vm_extensions/-
-  value:
-    cloud_properties:
-      security_groups:
-        - ((security-group-id))
-        - ((internal-security-group))
-    name: ((job))-security-groups
+  path: /vm_extensions/name=((job))-lb/cloud_properties/security_groups?/-
+  value: ((security-group-id))
+
+- type: replace
+  path: /vm_extensions/name=((job))-lb/cloud_properties/security_groups?/-
+  value: ((internal-security-group))
