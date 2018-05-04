@@ -37,8 +37,6 @@ lbs () {
 
   # Create one or more listeners for your load balancer using create-listener .
   aws elbv2 create-listener --region ${region} --load-balancer-arn ${vault_load_balancer_arn} --protocol TCP --port ${vault_port} --default-actions Type=forward,TargetGroupArn=${vault_target_group_arn} > /dev/null
-
-  update_cloud_config
 }
 
 dns () {
@@ -49,13 +47,15 @@ dns () {
 
 firewall() {
   echo "Adding security group with vault firewall rules..."
-  set -e
-  aws ec2 create-security-group --description "Access to Vault" --group-name "${vault_security_group_name}" --vpc-id "${vpc_id}" --region ${region} > ${vault_security_group_file}
-  vault_security_group_id="$(cat ${vault_security_group_file} | jq --raw-output '.GroupId')"
-  aws ec2 authorize-security-group-ingress --group-id "${vault_security_group_id}" --region ${region} --protocol tcp --port ${vault_port} --cidr ${vault_access_cidr}
-  bosh -e ${env_id} cloud-config |
-    bosh interpolate -o etc/aws/add-security-group.yml -v internal-security-group="${internal_security_group}" -v security-group-id="${vault_security_group_id}" -v job="vault" - |
-    bosh -n -e ${env_id} update-cloud-config -
+
+  # aws ec2 create-security-group --description "Access to Vault" --group-name "${vault_security_group_name}" --vpc-id "${vpc_id}" --region ${region} > ${vault_security_group_file}
+  # vault_security_group_id="$(cat ${vault_security_group_file} | jq --raw-output '.GroupId')"
+  # aws ec2 authorize-security-group-ingress --group-id "${vault_security_group_id}" --region ${region} --protocol tcp --port ${vault_port} --cidr ${vault_access_cidr}
+
+  bosh interpolate \
+    -v internal-security-group="${internal_security_group}" \
+    -v security-group-id="${vault_security_group_id}" \
+    -v job="vault"  etc/aws/add-security-group.yml > ${state_dir}/cloud-config/add-vault-sg.yml
 }
 
 teardown_infra() {
