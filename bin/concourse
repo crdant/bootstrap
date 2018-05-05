@@ -3,7 +3,6 @@
 BASEDIR=$(dirname $(dirname $0))
 . "${BASEDIR}/lib/env.sh"
 . "${BASEDIR}/lib/dns.sh"
-. "${BASEDIR}/lib/${iaas}/concourse.sh"
 . "${BASEDIR}/lib/generate_passphrase.sh"
 . "${BASEDIR}/lib/secrets.sh"
 . "${BASEDIR}/lib/certificates.sh"
@@ -65,18 +64,28 @@ interpolate () {
   bosh interpolate "${manifest}" `vars`
 }
 
+patch () {
+  local job="concourse"
+  set -x
+  bbl plan --state-dir ${state_dir} --lb-type concourse
+  cp -r ${patch_dir}/${iaas}/${job}/terraform/. ${state_dir}/terraform
+
+  cat <<TFVARS > ${state_dir}/vars/${job}.tfvars
+concourse_host="${concourse_host}"
+TFVARS
+
+}
+
+infra () {
+  bbl up --state-dir ${state_dir}
+}
+
 deploy () {
   local manifest=${manifest_dir}/concourse.yml
   admin_password=`generate_passphrase 4`
   safe_auth_bootstrap
   safe set secret/bootstrap/concourse/admin value="${admin_password}"
   bosh -n -e "${env_id}" -d concourse deploy "${manifest}" `vars`
-}
-
-lbs () {
-  echo "Configuring load balancers..."
-  bbl plan --state-dir ${state_dir} --lb-type concourse --lb-cert ${concourse_cert_file} --lb-key ${concourse_key_file} --lb-chain ${concourse_chain_file}
-  bbl up --state-dir ${state_dir}
 }
 
 login () {
@@ -111,8 +120,6 @@ teardown () {
   lb_address=`gcloud compute --project ${project} forwarding-rules describe ${env_id}-concourse-https --region ${region} --format json | jq --raw-output '.IPAddress'`
   gcloud dns record-sets --project ${project} transaction remove -z "${dns_zone}" --name "${concourse_host}" --ttl "${dns_ttl}" --type A "${lb_address}" --transaction-file="${transaction_file}"
   gcloud dns record-sets --project ${project} transaction execute -z "${dns_zone}" --transaction-file="${transaction_file}"
-
-  bbl delete-lbs
 }
 
 
@@ -145,11 +152,11 @@ if [ $# -gt 0 ]; then
         releases
         deploy
         ;;
-      lbs )
-        lbs
+      patch )
+        patch
         ;;
-      dns )
-        dns
+      infra )
+        infra
         ;;
       init )
         ;;
@@ -191,7 +198,7 @@ fi
 ssl_certificates
 stemcell
 releases
-lbs
+patch
+infra
 deploy
-dns
 login
