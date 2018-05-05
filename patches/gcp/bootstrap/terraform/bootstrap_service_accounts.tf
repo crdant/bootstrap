@@ -8,7 +8,7 @@ resource "google_service_account" "bootstrap_service_account" {
 }
 
 resource "google_service_account_iam_binding" "bootstrap_account_iam" {
-  service_account_id = "${var.bbl_service_account}"
+  service_account_id = "${var.bootstrap_domain_token}"
   role        = "roles/editor"
 
   members = [
