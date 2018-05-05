@@ -5,13 +5,13 @@ BASEDIR=$(dirname $(dirname $0))
 . "${BASEDIR}/lib/certificates.sh"
 
 stemcell_version=3431.13
-stemcell_checksum=8ae6d01f01f627e70e50f18177927652a99a4585
 
 ldap_release_repository=https://github.com/cloudfoundry-community/openldap-boshrelease.git
 ldap_host="ldap.${subdomain}"
 ldap_static_ip=10.0.47.195
-ldap_cert_file="${ca_dir}/${ldap_host}.crt"
-ldap_key_file="${ca_dir}/${ldap_host}.key"
+
+export ldap_cert_file=${ca_dir}/${ldap_host}/cert.pem
+export ldap_key_file=${ca_dir}/${ldap_host}/privkey.pem
 
 # ldap_static_ip=10.244.0.2
 ldap_port=636
@@ -21,11 +21,31 @@ ssl_certificates () {
 
   common_name="${ldap_host}"
 
-  create_certificate ${common_name} --ip ${ldap_static_ip}
+  create_certificate ${common_name} --domain ${ldap_host}
 }
 
 stemcell () {
-  bosh -n -e ${env_id} upload-stemcell https://bosh.io/d/stemcells/bosh-google-kvm-ubuntu-trusty-go_agent?v=${stemcell_version} --sha1 ${stemcell_checksum}
+  bosh -n -e ${env_id} upload-stemcell https://bosh.io/d/stemcells/bosh-${stemcell_iaas}-ubuntu-trusty-go_agent?v=${stemcell_version}
+}
+
+patch() {
+  local job="ldap"
+
+  cp -r ${patch_dir}/${iaas}/${job}/terraform/. ${state_dir}/terraform
+
+  for ops_file in $(find ${patch_dir}/${iaas}/${job}/cloud-config -name '*.yml' );
+  do
+    bosh interpolate -v env-id="${env_id}" -v job="${job}" ${ops_file} > ${state_dir}/cloud-config/$(basename $ops_file)
+  done
+
+  cat <<TFVARS > ${state_dir}/vars/${job}.tfvars
+ldap_host="${ldap_host}"
+ldap_port="${ldap_port}"
+TFVARS
+}
+
+infra() {
+  bbl up --state-dir ${state_dir} --debug
 }
 
 clone_release () {
@@ -99,33 +119,6 @@ url () {
   echo "ldaps://${ldap_host}:${ldap_port}"
 }
 
-lbs () {
-  echo "Creating load balancer..."
-  local address_name="${env_id}-ldap"
-  local load_balancer_name="${env_id}-ldap"
-  gcloud compute --project "${project}" addresses create "${address_name}" --region "${region}" --no-user-output-enabled
-  gcloud compute --project "${project}" target-pools create "${load_balancer_name}" --description "Target pool for load balancing LDAP access" --region "${region}" --no-user-output-enabled
-  gcloud compute --project "${project}" forwarding-rules create "${load_balancer_name}" --description "Forwarding rule for load balancing LDAP access." --region "${region}" --address "https://www.googleapis.com/compute/v1/projects/${project}/regions/${region}/addresses/${address_name}" --ip-protocol "TCP" --ports "636" --target-pool "${load_balancer_name}" --no-user-output-enabled
-  update_cloud_config
-}
-
-dns () {
-  echo "Configuring DNS..."
-  local address_name="${env_id}-ldap"
-  local address=$(gcloud compute --project ${project} addresses describe "${address_name}" --format json --region "${region}"  | jq --raw-output ".address")
-  local transaction_file="${workdir}/ldap-dns-transaction-${pcf_dns_zone}.xml"
-
-  gcloud dns record-sets transaction start -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
-  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${ldap_host}" --ttl "${dns_ttl}" --type A "${address}" --transaction-file="${transaction_file}" --no-user-output-enabled
-  gcloud dns record-sets transaction execute -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
-}
-
-update_cloud_config () {
-  bosh -e ${env_id} cloud-config |
-    bosh interpolate -o etc/add-lb.yml -v env-id="${env_id}" -v job="ldap" - |
-    bosh -n -e ${env_id} update-cloud-config -
-}
-
 stop () {
   bosh -n -e ${env_id} -d openldap update-resurrection off
   for cid in `bosh -n -e ${env_id} -d openldap vms --json | jq --raw-output '.Tables[].Rows[].vm_cid'`; do
@@ -155,7 +148,7 @@ if [ $# -gt 0 ]; then
       stemcell )
         stemcell
         ;;
-      release )
+      release | releases )
         releases
         ;;
       interpolate )
@@ -164,23 +157,20 @@ if [ $# -gt 0 ]; then
       deploy )
         deploy
         ;;
-      firewall )
-        firewall
-        ;;
       url )
         url
         ;;
       binddn )
         binddn
         ;;
-      lbs )
-        lbs
+      patch )
+        patch
         ;;
       cloud-config )
         update_cloud_config
         ;;
-      dns )
-        dns
+      infra )
+        infra
         ;;
       convert )
         domain_string="${2}"
@@ -209,7 +199,6 @@ fi
 ssl_certificates
 stemcell
 releases
-lbs
-dns
+patch
+infra
 deploy
-firewall
