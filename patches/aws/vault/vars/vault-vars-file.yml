@@ -1,0 +1,3 @@
+vault-lb-extension: ((job))-lb
+vault-security-group: ((env-id))-((job))-lb-internal-security-group
+vault-target-group: ((short-id))-((job))-port

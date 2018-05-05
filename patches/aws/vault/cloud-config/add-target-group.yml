@@ -1,3 +1,0 @@
-- type: replace
-  path: /vm_extensions/name=((job))-lb/cloud_properties/lb_target_groups?/-
-  value: ((target-group))

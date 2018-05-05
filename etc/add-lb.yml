@@ -1,5 +1,0 @@
-- type: replace
-  path: /vm_extensions/-
-  value:
-    cloud_properties: {}
-    name: ((job))-lb
