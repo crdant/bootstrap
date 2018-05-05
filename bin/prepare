@@ -15,8 +15,15 @@ if [ ! -d ${state_dir} ] ; then
   mkdir -p ${state_dir}
 fi
 
+trust() {
+  # golang commands don't love Let's Encrypt
+  wget -O ${ca_cert_file} https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt
+}
+
 plan() {
-  bbl plan --state-dir ${state_dir}
+  # N.B: This will create concourse load balancers before we need them. Annoys me but it's painful
+  # to do it later
+  bbl plan --state-dir ${state_dir} --lb-type concourse
 }
 
 patch() {
@@ -62,6 +69,9 @@ login() {
 if [ $# -gt 0 ]; then
   while [ $# -gt 0 ]; do
     case $1 in
+      trust )
+        trust
+        ;;
       plan )
         plan
         ;;
@@ -93,6 +103,7 @@ if [ $# -gt 0 ]; then
   exit
 fi
 
+trust
 plan
 patch
 director

@@ -18,6 +18,7 @@ manifest_dir="${BASEDIR}/manifests"
 # certificate configuration
 certbot_dir=/usr/local/etc/certbot
 ca_dir=${certbot_dir}/live
+ca_cert_file=${key_dir}/letsencrypt.pem
 
 . ${lib_dir}/${iaas}/env.sh
 . ${lib_dir}/${iaas}/bbl_env.sh
