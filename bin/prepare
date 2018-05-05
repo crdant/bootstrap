@@ -21,7 +21,7 @@ plan() {
 
 patch() {
   cp -r ${patch_dir}/${iaas}/bootstrap/. ${state_dir}
-  bosh interpolate --var subdomain=${subdomain} ${patch_dir}/${iaas}/bootstrap/vars/bootstrap.tfvars > ${state_dir}/vars/bootstrap.tfvars
+  bosh interpolate --var subdomain=${subdomain} --var subdomain-token=${subdomain_token} ${patch_dir}/${iaas}/bootstrap/vars/bootstrap.tfvars > ${state_dir}/vars/bootstrap.tfvars
 }
 
 director() {
