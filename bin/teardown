@@ -2,11 +2,14 @@
 
 BASEDIR=$(dirname $(dirname $0))
 . "${BASEDIR}/lib/env.sh"
-. "${BASEDIR}/lib/${iaas}/teardown.sh"
 
 director() {
   echo "Destroying the BOSH director..."
   bbl down --state-dir ${state_dir} --no-confirm
+}
+
+iaas() {
+  bbl cleanup-leftovers --state-dir ${state_dir} --filter ${env_id}
 }
 
 cleanup() {
@@ -27,8 +30,8 @@ if [ $# -gt 0 ]; then
       director )
         director
         ;;
-      accounts )
-        iam_accounts
+      iaas )
+        iaas
         ;;
       cleanup )
         cleanup
@@ -43,7 +46,6 @@ if [ $# -gt 0 ]; then
   done
 fi
 
-dns
 director
-iam_accounts
+iaas
 cleanup
