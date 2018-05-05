@@ -13,6 +13,7 @@ iam_policy_file="${workdir}/${env_id}-iam-policy.json"
 dns_zone_file="${workdir}/${subdomain_token}-dns-zone.json"
 
 if [ -f ${key_file} ] ; then
+  # TO DO: get the proper credentials from terraform, because this isn't working any longer
   access_key_id=$(cat ${key_file} | jq --raw-output '.AccessKey.AccessKeyId')
   secret_access_key=$(cat ${key_file} | jq --raw-output '.AccessKey.SecretAccessKey')
 else
