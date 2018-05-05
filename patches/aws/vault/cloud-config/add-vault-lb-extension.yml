@@ -3,5 +3,7 @@
   value:
     name: ((job))-lb
     cloud_properties:
-      security_groups: ((vault-security-group))
-      lb_target_groups: ((vault-target-group))
+      security_groups:
+      - ((vault_lb_internal_security_group))
+      - ((internal_security_group))
+      lb_target_groups: ((vault_lb_target_groups))
