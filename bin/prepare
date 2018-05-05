@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 BASEDIR=$(dirname $(dirname $0))
 . "${BASEDIR}/lib/env.sh"
-. "${BASEDIR}/lib/${iaas}/prepare.sh"
 set -e
 
 if [ ! -d ${workdir} ] ; then
@@ -16,11 +15,19 @@ if [ ! -d ${state_dir} ] ; then
   mkdir -p ${state_dir}
 fi
 
+plan() {
+  bbl plan --state-dir ${state_dir}
+}
+
+patch() {
+  cp -r ${patch_dir}/${iaas}/bootstrap/. ${state_dir}
+  bosh interpolate --var subdomain=${subdomain} ${patch_dir}/${iaas}/bootstrap/vars/bootstrap.tfvars > ${state_dir}/vars/bootstrap.tfvars
+}
+
 director() {
   echo "Creating the $env_id BOSH director..."
-  bbl up --state-dir ${state_dir}
+  bbl up --state-dir ${state_dir} --debug
   env_id=$(bbl env-id --state-dir ${state_dir})
-  firewall
 }
 
 client() {
@@ -51,11 +58,11 @@ login() {
 if [ $# -gt 0 ]; then
   while [ $# -gt 0 ]; do
     case $1 in
-      accounts )
-        iam_accounts
+      plan )
+        plan
         ;;
-      dns )
-        dns
+      patch )
+        patch
         ;;
       director )
         director
@@ -82,9 +89,9 @@ if [ $# -gt 0 ]; then
   exit
 fi
 
-iam_accounts
+plan
+patch
 director
-dns
 client
 login
 trust
