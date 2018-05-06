@@ -12,10 +12,11 @@ key_file="${key_dir}/${iam_account_name}-access-key.json"
 iam_policy_file="${workdir}/${env_id}-iam-policy.json"
 dns_zone_file="${workdir}/${subdomain_token}-dns-zone.json"
 
-if [ -f ${key_file} ] ; then
-  # TO DO: get the proper credentials from terraform, because this isn't working any longer
-  access_key_id=$(cat ${key_file} | jq --raw-output '.AccessKey.AccessKeyId')
-  secret_access_key=$(cat ${key_file} | jq --raw-output '.AccessKey.SecretAccessKey')
+if [ -f ${cloud_config_vars_file} ] ; then
+  access_key_vars="$(sed -e 's/:[^:\/\/]/="/g;s/$/"/g;s/ *=/=/g' ${cloud_config_vars_file} | grep "^bbl_secret_access_key\|^bbl_secret_access_key_id")"
+  eval ${access_key_vars}
+  access_key_id=${bbl_secret_access_key_id}
+  secret_access_key=${bbl_secret_access_key}
 else
   access_key_id=${AWS_ACCESS_KEY_ID}
   secret_access_key=${AWS_SECRET_ACCESS_KEY}

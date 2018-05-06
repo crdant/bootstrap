@@ -55,15 +55,22 @@ resource "aws_iam_role_policy_attachment" "bbl" {
   policy_arn = "${aws_iam_policy.bbl.arn}"
 }
 
-resource "aws_iam_instance_profile" "bbl" {
+resource "aws_iam_user" "bbl" {
   name = "${var.env_id}-bbl"
-  role = "${aws_iam_role.bbl.name}"
-
-  lifecycle {
-    ignore_changes = ["name"]
-  }
 }
 
-output "bbl_iam_instance_profile" {
-  value = "${join("", aws_iam_instance_profile.bbl.*.name)}"
+resource "aws_iam_access_key" "bbl" {
+  user    = "${aws_iam_user.bbl.name}"
+}
+
+output "bbl_iam_user" {
+  value = "${aws_iam_user.bbl.name}"
+}
+
+output "bbl_secret_access_key_id" {
+  value = "${aws_iam_access_key.bbl.id}"
+}
+
+output "bbl_secret_access_key" {
+  value = "${aws_iam_access_key.bbl.secret}"
 }
