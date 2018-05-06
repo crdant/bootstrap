@@ -7,6 +7,9 @@ domain_token=`echo ${domain} | tr . -`
 subdomain="bbl.${iaas}.${domain}"
 subdomain_token=`echo ${subdomain} | tr . -`
 
+om_version_regex="^2\.0\.[0-9]+$"
+pas_version_regex="^2\.0\.[0-9]+$"
+
 lib_dir="${BASEDIR}/lib"
 state_dir="${BASEDIR}/state"
 key_dir="${BASEDIR}/keys"

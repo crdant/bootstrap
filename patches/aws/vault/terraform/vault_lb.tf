@@ -4,7 +4,7 @@ variable "vault_port" {
 
 resource "aws_security_group" "vault_lb_internal_security_group" {
   name        = "${var.env_id}-vault-lb-internal-security-group"
-  description = "Concourse Internal"
+  description = "Vault Internal"
   vpc_id      = "${local.vpc_id}"
 
   tags {

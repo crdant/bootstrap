@@ -12,12 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Pivotal Net Token to download binaries from https://network.pivotal.io
-pivnet_token: CHANGEME
-
-# Cloud Controller url and credentials - should have admin privileges
-cf_api_uri: CHANGEME
-cf_user: CHANGEME
-cf_password: CHANGEME
-
 git_private_key:

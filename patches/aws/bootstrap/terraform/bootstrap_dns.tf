@@ -9,3 +9,7 @@ resource "aws_route53_zone" "bootstrap_dns_zone" {
     Name = "${var.env_id}-bootstrap-zone"
   }
 }
+
+output "bootstrap_dns_zone_id" {
+  value = "${aws_route53_zone.bootstrap_dns_zone.zone_id}"
+}
