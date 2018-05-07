@@ -32,7 +32,7 @@ patch() {
   cat <<TFVARS > ${state_dir}/vars/${job}.tfvars
 bootstrap_domain="${subdomain}"
 bootstrap_domain_token="${subdomain}"
-bootstrap_dns_ttl="${dns_ttl}"
+dns_ttl="${dns_ttl}"
 TFVARS
 }
 
