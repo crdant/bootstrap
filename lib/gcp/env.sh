@@ -1,4 +1,5 @@
 project=fe-cdantonio
+account=${email}
 
 stemcell_iaas="google-kvm"
 region="us-east4"
