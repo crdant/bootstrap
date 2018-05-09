@@ -1,7 +1,7 @@
 email=cdantonio@pivotal.io
 pivnet_token=${PIVNET_TOKEN}
 domain=crdant.io
-iaas=aws
+iaas=gcp
 
 domain_token=`echo ${domain} | tr . -`
 subdomain="bbl.${iaas}.${domain}"
