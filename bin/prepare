@@ -22,7 +22,7 @@ trust() {
 
 plan() {
   # N.B: This will create concourse load balancers before we need them. Annoys me but it's painful
-  # to do it later
+  #      to do it later. See about a PR to the team for it.
   bbl plan --state-dir ${state_dir} --lb-type concourse
 }
 
