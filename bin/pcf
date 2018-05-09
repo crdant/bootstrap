@@ -55,8 +55,8 @@ team_secret_root="concourse/${concourse_team}"
 deploy_secret_root="concourse/${concourse_team}/${pcf_install_pipeline}"
 buildpack_secret_root="concourse/${concourse_team}/${buildpack_upgrade_pipeline}"
 
-pre_patch() {
-  local job="pcf_pre"
+patch() {
+  local job="pcf"
 
   cp -r ${patch_dir}/${iaas}/${job}/terraform/. ${state_dir}/terraform
   cat <<TFVARS > ${state_dir}/vars/${job}.tfvars
@@ -77,12 +77,6 @@ TFVARS
 infra() {
   bbl up --state-dir ${state_dir} --debug
 
-}
-
-post_patch() {
-  local job="pcf_post"
-
-  cp -r ${patch_dir}/${iaas}/${job}/terraform/. ${state_dir}/terraform
 }
 
 prepare_concourse() {
@@ -222,7 +216,7 @@ secrets () {
   safe gen ${deploy_secret_root}/db_autoscale_password value
   safe set ${deploy_secret_root}/db_uaa_username value=uaa
   safe gen ${deploy_secret_root}/db_uaa_password value
-  safe set ${deploy_secret_root}/db_app_usage_service_username value=pcf_app_usage
+  safe set ${deploy_secret_root}/db_app_usage_service_username value=pcf_app_ usage
   safe gen ${deploy_secret_root}/db_app_usage_service_password value
   safe set ${deploy_secret_root}/db_ccdb_username value=pcf_ccdb
   safe gen ${deploy_secret_root}/db_ccdb_password value
@@ -575,11 +569,8 @@ if [ $# -gt 0 ]; then
       certificates | certs | ssl_certificates)
         ssl_certificates
         ;;
-      pre_patch )
-        pre_patch
-        ;;
-      post_patch)
-        post_patch
+      patch )
+        patch
         ;;
       infra)
         infra
@@ -697,7 +688,7 @@ if [ $# -gt 0 ]; then
 fi
 
 ssl_certificates
-pre_patch
+patch
 infra
 
 prepare_concourse
@@ -709,6 +700,3 @@ params
 pipelines
 install
 ldap
-
-post_patch
-infra
