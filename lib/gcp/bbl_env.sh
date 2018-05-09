@@ -1,0 +1,3 @@
+BBL_IAAS=${iaas}
+BBL_GCP_SERVICE_ACCOUNT_KEY=${key_file}
+BBL_GCP_REGION=${region}

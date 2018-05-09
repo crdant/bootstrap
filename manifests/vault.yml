@@ -15,7 +15,7 @@ instance_groups:
       backend:
         use_file: true
 
-  vm_type:  n1-standard-1
+  vm_type:  small
   vm_extensions:
     - vault-lb
   stemcell: trusty

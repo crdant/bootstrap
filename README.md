@@ -1,13 +1,18 @@
 # PCF Bootstrap Environment
 
-Bootstrap an environment to do various BOSH-y things. Currently GCP specific.
+Bootstrap an environment with BOSH, secrets management ([Hashicorp
+Vault](https://www.vaultproject.io)), [Concourse](https://concourse-ci.org), and
+[PCF](https://pivotal.io). PCF is installed with the [PCF
+Pipelines](https://github.com/pivotal-cf/pcf-pipelines). Uses [BOSH Boot
+Loader](https://github.com/cloudfoundrb-bootloader) plan patches to simplify
+setup. Currently working with AWS and GCP.
 
 ## Steps
 
 1. Assure dependencies are met (see below)
-1. Enable the APIs for google.
+1. If using GCP, enable the appropriate APIs.
 1. Edit `lib/env.sh` to match your needs.
-1. Run `prepare` to prepare GCP and the bootstrap BOSH environment
+1. Run `prepare` to prepare infrastructure and the bootstrap BOSH environment
 1. Make sure DNS for your bootstrap subdomain is delegated from your primary zone (if needed).
 1. Run `secrets` to make Vault available for secrets.
 1. Configure `secrets` for the bootstrap environment by running `configure`.
@@ -17,7 +22,7 @@ Bootstrap an environment to do various BOSH-y things. Currently GCP specific.
 1. An SSH key in your `.ssh` directory named `concourse_github` with the public key registered with your Github account.
 1. Add secrets under `concourse/pcf/deploy-pcf` path for your Google Cloud Storage
    S3-compatible access key id (`gcp_storage_access_key`) and secret access key (`gcp_storage_secret_key`) in vault.
-1. Running the `pcf` now will load [PCF Platform Automation with Concourse](https://network.pivotal.io/products/pcf-automation), nee [PCF Pipelines](https://github.com/pivotal-cf/pcf-pipelines), into the Concourse you just installed and trigger the right jobs to install PCF.
+1. Running `pcf` now will load [PCF Platform Automation with Concourse](https://network.pivotal.io/products/pcf-automation), nee [PCF Pipelines](https://github.com/pivotal-cf/pcf-pipelines), into the Concourse you just installed and trigger the right jobs to install PCF.
 
 ## Using the environment
 
@@ -48,7 +53,7 @@ Each command has some subcommands for running a piece of what it does. More to c
 
 ## Dependencies
 
-1. [BOSH Boot Loader](https://github.com/cloudfoundrb-bootloader) 4.4 or later. It's in the Cloud Foundry tap on
+1. [BOSH Boot Loader](https://github.com/cloudfoundrb-bootloader) 6.x or later. It's in the Cloud Foundry tap on
 Homebrew, so Mac users can run `brew install cloudfoundry/tap/bbl`.
 2. [Safe](https://github.com/starkandwayne/safe). On a Mac you can run `brew install starkandwayne/cf/safe`.
 3. Hashicorp [Vault CLI](https://www.vaultproject.io). If you're on a Mac run `brew install vault`.
@@ -58,7 +63,7 @@ Homebrew, so Mac users can run `brew install cloudfoundry/tap/bbl`.
 ## Coming soon
 
 1. Deploy concourse with standard manifest plus ops files from [concourse-deployment](https://github.com/concourse/concourse-deployment)
-1. Use `yaml-patch` to edit the cloud config to make changes more idempotent.
+~~1. Make cloud config changes idempotent.~~
 1. Use Credhub (created by `bbl` or standalone) instead of deploying/managing vault.
 1. Windows in PCF and concourse
 1. PCF tile support
@@ -68,5 +73,5 @@ Homebrew, so Mac users can run `brew install cloudfoundry/tap/bbl`.
 1. Making this document more readable and useful.
 1. Making secrets highly available.
 1. Making LDAP highly available.
-1. Other IaaSes.
+~~1. Other IaaSes.~~
 1. Rewrite in a programming language for better modularity and invocation across modules

@@ -17,11 +17,7 @@ request_certificate () {
     while [ $# -gt 0 ]; do
       case $1 in
         --domain )
-          address_args="${address_args} --domain \"${2}\""
-          shift 2
-          ;;
-        --ip )
-          address_args="${address_args} --domain \"${2}\""
+          address_args="${address_args} --domain ${2}"
           shift 2
           ;;
         * )
@@ -33,7 +29,7 @@ request_certificate () {
   fi
 
   certbot certonly --server https://acme-v02.api.letsencrypt.org/directory \
-    --cert-name "${common_name}" ${address_args} \
-    --dns-google --dns-google-credentials ${key_file} --dns-google-propagation-seconds 120 \
-    --config-dir ${certbot_dir} --logs-dir ${log_dir} --work-dir ${key_dir}/certbot
+    -m ${email} --agree-tos --cert-name ${common_name} ${address_args} \
+    --config-dir ${certbot_dir} --logs-dir ${log_dir} --work-dir ${key_dir}/certbot \
+    ${certbot_dns_args}
 }

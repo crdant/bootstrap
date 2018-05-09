@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 BASEDIR=$(dirname $(dirname $0))
 . "${BASEDIR}/lib/env.sh"
+. "${BASEDIR}/lib/env.sh"
 . "${BASEDIR}/lib/secrets.sh"
 . "${BASEDIR}/lib/generate_passphrase.sh"
 . "${BASEDIR}/lib/certificates.sh"
+
+# allow for iaas customizations
+if [ -f ${lib_dir}/${iaas}/pcf.sh ] ; then
+  . ${lib_dir}/${iaas}/pcf.sh
+fi
 
 concourse_team=pcf
 concourse_target=${env_id}-${concourse_team}
@@ -15,29 +21,63 @@ pcf_pipelines_local=${workdir}/pcf-pipelines
 pcf_pipelines_version="v0.23.0"
 
 pcf_install_pipeline="deploy-pcf"
-pcf_install_pipeline_file="${workdir}/pcf-pipelines/install-pcf/gcp/pipeline.yml"
+pcf_install_pipeline_file="${workdir}/pcf-pipelines/install-pcf/${iaas}/pipeline.yml"
 pcf_install_parameter_file="${workdir}/${env_id}-${pcf_install_pipeline}-params.yml"
 
 pcf_upgrade_pipeline="upgrade-pcf"
 pcf_upgrade_pipeline_file="${workdir}/pcf-pipelines/upgrade-tile/pipeline.yml"
 pcf_upgrade_parameter_file="${workdir}/${env_id}-${pcf_upgrade_pipeline}-params.yml"
 
-ops_dir=${BASEDIR}/pipelines/ops
+om_upgrade_pipeline="upgrade-ops-manager"
+om_upgrade_pipeline_file="${workdir}/pcf-pipelines/upgrade-ops-manager/${iaas}/pipeline.yml"
+om_upgrade_parameter_file="${workdir}/${env_id}-${om_upgrade_pipeline}-params.yml"
 
+buildpack_upgrade_pipeline="upgrade-buildpacks"
+buildpack_upgrade_pipeline_file="${workdir}/pcf-pipelines/upgrade-buildpacks/pipeline.yml"
+buildpack_upgrade_parameter_file="${workdir}/${env_id}-${buildpack_upgrade_pipeline}-params.yml"
+
+ops_dir=${BASEDIR}/pipelines/ops
 
 pcf_service_account_name="pcf-${short_id}"
 pcf_service_account="${pcf_service_account_name}@${project}.iam.gserviceaccount.com"
 pcf_key_file=${key_dir}/${project}-${pcf_service_account_name}.json
 pcf_dns_zone="pcf-${short_id}-zone"         # TO DO: See if I can get this from the Terraform state (or even the pipelines terraform file)
-pcf_subdomain="pcf.${subdomain}"
 
-terraform_statefile_bucket="${env_id}-bucket"
+pcf_subdomain="pcf.${subdomain}"
+pcf_system_domain="system.${pcf_subdomain}"
+pcf_apps_domain="apps.${pcf_subdomain}"
+opsman_host="opsman.${pcf_subdomain}"
 
 mysql_backup_bucket=${short_id}-mysql-backups
 mysql_backup_schedule="0 0/72 * * *"
 
 team_secret_root="concourse/${concourse_team}"
 deploy_secret_root="concourse/${concourse_team}/${pcf_install_pipeline}"
+buildpack_secret_root="concourse/${concourse_team}/${buildpack_upgrade_pipeline}"
+
+patch() {
+  local job="pcf"
+
+  cp -r ${patch_dir}/${iaas}/${job}/terraform/. ${state_dir}/terraform
+  cat <<TFVARS > ${state_dir}/vars/${job}.tfvars
+key_dir="${key_dir}"
+pcf_subdomain="${pcf_subdomain}"
+pcf_wildcard_cert=<<CERT
+$(cat ${ca_dir}/${pcf_subdomain}/cert.pem)
+CERT
+pcf_wildcard_key=<<KEY
+$(cat ${ca_dir}/${pcf_subdomain}/privkey.pem)
+KEY
+pcf_wildcard_chain=<<CHAIN
+$(cat ${ca_dir}/${pcf_subdomain}/chain.pem)
+CHAIN
+TFVARS
+}
+
+infra() {
+  bbl up --state-dir ${state_dir} --debug
+
+}
 
 prepare_concourse() {
   safe_auth_bootstrap
@@ -57,52 +97,33 @@ concourse_login() {
   fly --target ${concourse_target} login --team-name ${concourse_team} --ca-cert ${ca_cert_file} --concourse-url=${concourse_url} --username=${pcf_concourse_user} --password=${pcf_concourse_password}
 }
 
-service_accounts () {
-  echo "Creating a service account for PCF..."
-
-  gcloud iam service-accounts --project "${project}" create "${pcf_service_account_name}" --display-name "PCF Bootstraped by BOSH Boot Loader (bbl) and Concourse" --no-user-output-enabled
-  gcloud projects add-iam-policy-binding "${project}" --member "serviceAccount:${pcf_service_account}" --role "roles/editor" --no-user-output-enabled
-
-  gcloud projects add-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/compute.instanceAdmin" --no-user-output-enabled
-  gcloud projects add-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/compute.networkAdmin" --no-user-output-enabled
-  gcloud projects add-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/compute.storageAdmin" --no-user-output-enabled
-  gcloud projects add-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/storage.admin" --no-user-output-enabled
-  gcloud projects add-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/cloudsql.admin" --no-user-output-enabled
-  gcloud projects add-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/dns.admin" --no-user-output-enabled
-  gcloud projects add-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/compute.securityAdmin" --no-user-output-enabled
-
-  gcloud iam service-accounts --project "${project}" keys create "${pcf_key_file}"  --iam-account "${pcf_service_account}"
-}
-
-buckets () {
-  echo "Creating storage buckets..."
-  gsutil mb -l ${storage_location} gs://${terraform_statefile_bucket}
-  gsutil acl ch -u ${service_account}:O gs://${terraform_statefile_bucket}
-  gsutil versioning set on gs://${terraform_statefile_bucket}
-
-  gsutil mb -l ${storage_location} gs://${mysql_backup_bucket}
-  gsutil acl ch -u ${service_account}:O gs://${mysql_backup_bucket}
-  gsutil versioning set on gs://${mysql_backup_bucket}
-}
-
 download () {
   # TODO: Switch to Pivnet?
   pivnet login --api-token ${PIVNET_TOKEN}
   pivnet download-product-files --product-slug pcf-automation --release-version ${pcf_pipelines_version} --download-dir ${workdir} --glob "pcf-pipelines-${pcf_pipelines_version}.tgz" --accept-eula
   tar -xzf "${workdir}/pcf-pipelines-${pcf_pipelines_version}.tgz" -C "${workdir}"
-  modernize_pipeline
-  adapt_pipeline
+  modernize_pipelines
+  adapt_pipelines
 }
 
-modernize_pipeline() {
+modernize_pipelines() {
   sed -i -e 's/{{/((/g' "${pcf_install_pipeline_file}"
   sed -i -e 's/}}/))/g' "${pcf_install_pipeline_file}"
   sed -i -e 's/{{/((/g' "${pcf_upgrade_pipeline_file}"
   sed -i -e 's/}}/))/g' "${pcf_upgrade_pipeline_file}"
+  sed -i -e 's/{{/((/g' "${om_upgrade_pipeline_file}"
+  sed -i -e 's/}}/))/g' "${om_upgrade_pipeline_file}"
+  sed -i -e 's/{{/((/g' "${buildpack_upgrade_pipeline_file}"
+  sed -i -e 's/}}/))/g' "${buildpack_upgrade_pipeline_file}"
+
+  # new style parameter substitution doesn't let values be blank so we put those back
+  sed -i -e 's/((opsman_client_id))/{{opsman_client_id}}/g' "${pcf_install_pipeline_file}"
+  sed -i -e 's/((opsman_client_secret))/{{opsman_client_secret}}/g' "${pcf_install_pipeline_file}"
 }
 
-adapt_pipeline() {
-  ops_file_args="$(find ${ops_dir}/*.yml | sort | sed 's/^/-o /' | xargs)"
+adapt_pipelines() {
+  ops_file_args="$(find ${ops_dir}/*.yml 2>/dev/null | sort | sed 's/^/-o /' | xargs)"
+  cp ${pcf_install_pipeline_file} ${pcf_install_pipeline_file}.orig
   cat "${pcf_install_pipeline_file}.orig" | yaml-patch ${ops_file_args} > ${pcf_install_pipeline_file}
 }
 
@@ -149,163 +170,183 @@ get_credential () {
 
 ssl_certificates () {
   echo "Creating SSL certificate for ERT..."
+  create_certificate "${pcf_subdomain}" \
+    --domain "${pcf_subdomain}" --domain "*.${pcf_apps_domain}" --domain "*.login.${pcf_system_domain}" \
+    --domain "*.uaa.${pcf_system_domain}" --domain "*.${pcf_system_domain}"
 
-  common_name="${pcf_subdomain}"
-  org_unit="Continuous Delivery"
-
-  request_certificate ${common_name} ${org_unit} --domain
-  echo "SSL certificate for ERT created and stored at ${ca_dir}/${common_name}.crt, private key stored at ${ca_dir}/${common_name}.key."
+  # needed because AWS load balancers require the certificate to be imported into AWS ACM before they are assigned
+  echo "SSL certificate for ERT created and stored at ${ca_dir}/${pcf_subdomain}/cert.pem, private key stored at ${ca_dir}/${pcf_subdomain}/privkey.pem."
 }
 
 secrets () {
   safe_auth
 
-  safe set ${team_secret_root}/gcp_service_account_key value="$(cat ${pcf_key_file})"
-
   # N.B. set these two on your own, No API for them
-  # safe set ${deploy_secret_root}/gcp_storage_access_key value=
-  # safe set ${deploy_secret_root}/gcp_storage_secret_key:
+  # safe set ${deploy_secret_root}/${iaas}_storage_access_key value=
+  # safe set ${deploy_secret_root}/${iaas}_storage_secret_key:
   safe set ${team_secret_root}/git_private_key value="$(cat ${HOME}/.ssh/concourse_github)"
   safe set ${team_secret_root}/pivnet_token value=${PIVNET_TOKEN}
   safe set ${team_secret_root}/opsman_admin_username value=admin
   safe gen ${team_secret_root}/opsman_admin_password value
 
   # store the certificates we generated
-  create_certificate "${env_id} Cloud Foundry" \
-    --domain "${pcf_subdomain}" --domain "*.cfapps.${pcf_subdomain}" --domain "*.login.sys.${pcf_subdomain}" \
-    --domain "*.uaa.sys.${pcf_subdomain}" --domain "*.sys.${pcf_subdomain}"
-
-  safe set ${deploy_secret_root}/pcf_ert_ssl_cert value="$(cat ${certbot_dir}/live/${env_id}\ Cloud\ Foundry/cert.pem)"
-  safe set ${deploy_secret_root}/pcf_ert_ssl_key value="$(cat ${certbot_dir}/live/${env_id}\ Cloud\ Foundry/privkey.pem)"
+  safe set ${deploy_secret_root}/pcf_ert_ssl_cert value="$(cat ${ca_dir}//${pcf_subdomain}/cert.pem)"
+  safe set ${deploy_secret_root}/pcf_ert_ssl_key value="$(cat ${ca_dir}//${pcf_subdomain}/privkey.pem)"
 
   # credhub
-  safe set /concourse/pcf/deploy-pcf/credhub_encryption_keys \
-    value="[{ name: default, provider: internal, primary: true, key: { secret: $( generate_passphrase 6 | gmd5sum | awk '{ print $1 }') } }]"
+  primary_key_name="${env_id}-credhub-key-1"
+
+  safe set ${deploy_secret_root}/credhub_encryption_key_name1 value=${primary_key_name}
+  safe gen ${deploy_secret_root}/credhub_encryption_key_secret1 value
+  safe set ${deploy_secret_root}/credhub_encryption_key_name2 value="${env_id}-credhub-key-2"
+  safe gen ${deploy_secret_root}/credhub_encryption_key_secret2 value
+  safe set ${deploy_secret_root}/credhub_encryption_key_name3 value="${env_id}-credhub-key-3"
+  safe gen ${deploy_secret_root}/credhub_encryption_key_secret3 value
+
+  # database Master Credentials
+  safe set ${deploy_secret_root}/db_master_username value=pcf_master
+  safe gen ${deploy_secret_root}/db_master_password value
 
   # Usernames must be 16 characters or fewer
-  safe set ${deploy_secret_root}/db_diego_username value=pcf-diego
+  safe set ${deploy_secret_root}/db_diego_username value=pcf_diego
   safe gen ${deploy_secret_root}/db_diego_password value
-  safe set ${deploy_secret_root}/db_notifications_username value=pcf-notification
+  safe set ${deploy_secret_root}/db_notifications_username value=pcf_notification
   safe gen ${deploy_secret_root}/db_notifications_password value
-  safe set ${deploy_secret_root}/db_autoscale_username value=pcf-autoscale
+  safe set ${deploy_secret_root}/db_autoscale_username value=pcf_autoscale
   safe gen ${deploy_secret_root}/db_autoscale_password value
   safe set ${deploy_secret_root}/db_uaa_username value=uaa
   safe gen ${deploy_secret_root}/db_uaa_password value
-  safe set ${deploy_secret_root}/db_app_usage_service_username value=pcf-app-usage
+  safe set ${deploy_secret_root}/db_app_usage_service_username value=pcf_app_ usage
   safe gen ${deploy_secret_root}/db_app_usage_service_password value
-  safe set ${deploy_secret_root}/db_ccdb_username value=pcf-ccdb
+  safe set ${deploy_secret_root}/db_ccdb_username value=pcf_ccdb
   safe gen ${deploy_secret_root}/db_ccdb_password value
-  safe set ${deploy_secret_root}/db_routing_username value=pcf-routing
+  safe set ${deploy_secret_root}/db_routing_username value=pcf_routing
   safe gen ${deploy_secret_root}/db_routing_password value
 
-  safe set ${deploy_secret_root}/db_accountdb_username value=pcf-accounts
+  safe set ${deploy_secret_root}/db_accountdb_username value=pcf_accounts
   safe gen ${deploy_secret_root}/db_accountdb_password value
-  safe set ${deploy_secret_root}/db_networkpolicyserverdb_username value=pcf-policy
+  safe set ${deploy_secret_root}/db_networkpolicyserverdb_username value=pcf_policy
   safe gen ${deploy_secret_root}/db_networkpolicyserverdb_password value
-  safe set ${deploy_secret_root}/db_nfsvolumedb_username value=pcf-nfs
+  safe set ${deploy_secret_root}/db_nfsvolumedb_username value=pcf_nfs
   safe gen ${deploy_secret_root}/db_nfsvolumedb_password value
-  safe set ${deploy_secret_root}/db_silk_username value=pcf-silk
+  safe set ${deploy_secret_root}/db_silk_username value=pcf_silk
   safe gen ${deploy_secret_root}/db_silk_password value
-  safe set ${deploy_secret_root}/db_locket_username value=pcf-locket
+  safe set ${deploy_secret_root}/db_locket_username value=pcf_locket
   safe gen ${deploy_secret_root}/db_locket_password value
 
-  safe set ${deploy_secret_root}/db_credhub_username value=pcf-credhub
+  safe set ${deploy_secret_root}/db_credhub_username value=pcf_credhub
   safe gen ${deploy_secret_root}/db_credhub_password value
 }
 
-params() {
-  cat <<PARAMS > ${pcf_install_parameter_file}
-
-  # GCP project to create the infrastructure in
-  gcp_project_id: ${project}
-
-  # Identifier to prepend to GCP infrastructure names/labels
-  gcp_resource_prefix: pcf-${short_id}
-
-  # GCP region
-  gcp_region: ${region}
-
-  # GCP Zones
-  gcp_zone_1: ${availability_zone_1}
-  gcp_zone_2: ${availability_zone_2}
-  gcp_zone_3: ${availability_zone_3}
-
-  # Storage Location
-  gcp_storage_bucket_location: ${storage_location}
-
-  terraform_statefile_bucket: ${terraform_statefile_bucket}
-
-  # Elastic Runtime Domain
-  pcf_ert_domain: ${pcf_subdomain} # This is the domain you will access ERT with
-  opsman_domain_or_ip_address: opsman.${pcf_subdomain} # This should be your pcf_ert_domain with "opsman." as a prefix
-
-  ert_errands_to_disable: none
-
-  # PCF Operations Manager minor version to install
-  opsman_major_minor_version: ^2\.1\..*$
-
-  # PCF Elastic Runtime minor version to install
-  ert_major_minor_version: ^2\.1\..*$
-
-  # ops man client info not needed if we're using admin username/password that we have set earlier
-  # but parameters need to be present
-  opsman_client_id: ""
-  opsman_client_secret: ""
-
-  # networking options
-  container_networking_nw_cidr: 10.254.32.0/22
-  internet_connected: false
-  networking_poe_ssl_certs: []
-  opsman_trusted_certs: []
-  routing_tls_termination: "load_balancer"
-  routing_custom_ca_certificates: []
-  security_acknowledgement: "X"
-
-  # configure routing
-  router_tls_ciphers: "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384"
-  routing_disable_http: true
-
-  # not using HA proxy, but need to have values for the pipeline to work
-  haproxy_backend_ca:
-  haproxy_forward_tls:
-  haproxy_tls_ciphers:
-
-  mysql_monitor_recipient_email: ${email} # Email address for sending mysql monitor notifications
-  mysql_backups: s3   # Whether to enable MySQL backups. (disable|s3|scp)
-  mysql_backups_s3_access_key_id: ((gcp_storage_access_key))
-  mysql_backups_s3_bucket_name: ${mysql_backup_bucket}
-  mysql_backups_s3_bucket_path:
-  mysql_backups_s3_cron_schedule: ${mysql_backup_schedule}more
-  mysql_backups_s3_endpoint_url: https://storage.googleapis.com
-  mysql_backups_s3_secret_access_key: ((gcp_storage_secret_key))
-  mysql_backups_scp_cron_schedule:
-  mysql_backups_scp_destination:
-  mysql_backups_scp_key:
-  mysql_backups_scp_port:
-  mysql_backups_scp_server:
-  mysql_backups_scp_user:
-PARAMS
-
-  cat <<PARAMS > ${pcf_upgrade_parameter_file}
-  product_version_regex: ^2\.1\..*$
-  opsman_client_id: ""
-  opsman_client_secret: ""
-  opsman_domain_or_ip_address: ${opsman_domain_or_ip_address}
-  iaas_type: ${iaas}
-  product_slug: "elastic-runtime"
-  product_globs: "*pivotal"
-PARAMS
-
+pipelines() {
+  install_pipeline
+  opsman_pipeline
+  upgrade_pipeline
+  buildpack_pipeline
 }
 
-pipeline () {
+install_params () {
+  # terraform_statefile_bucket="${env_id}-bucket"
+  cat <<PARAMS > ${pcf_install_parameter_file}
+ERT_DOMAIN: ${pcf_subdomain} # This is the domain you will access ERT with, for example: pcf.example.com.
+system_domain: ${pcf_system_domain} # e.g. system.pcf.example.com
+apps_domain: ${pcf_apps_domain} # e.g. apps.pcf.example.com
+ert_major_minor_version: ${pas_version_regex} # ERT minor version to track (e.g ^2\.0\.[0-9]+$ will track 2.0.x versions)
+mysql_monitor_recipient_email: ${email}
+opsman_domain_or_ip_address: ${opsman_host} #This must be your pcf_ert_domain with "opsman." as a prefix. For example, opsman.pcf.example.com
+opsman_major_minor_version: ${om_version_regex} # Ops Manager minor version to track (e.g ^2\.0\.[0-9]+$ will track 2.0.x versions)
+terraform_prefix: ${short_id}
+PARAMS
+  install_iaas_params
+}
+
+install_pipeline () {
   concourse_login
   fly --target ${concourse_target} set-pipeline --pipeline ${pcf_install_pipeline} \
-    --config ${pcf_install_pipeline_file} --load-vars-from ${pcf_install_parameter_file}
+    --config ${pcf_install_pipeline_file} --load-vars-from ${params_dir}/install-pcf/${iaas}/params.yml \
+    --load-vars-from ${pcf_install_parameter_file}
   fly --target ${concourse_target} unpause-pipeline --pipeline ${pcf_install_pipeline}
+}
 
+
+opsman_params () {
+  cat <<PARAMS > ${om_upgrade_parameter_file}
+  # Existing Ops Manager VM name pattern. This should uniquely filter to a running Ops Manager instance.
+# eg.  myenv-OpsMan
+existing_opsman_vm_name: CHANGEME
+# Ops Manager Admin Credentials - set during the installation of Ops Manager
+# Either opsman_client_id/opsman_client_secret or opsman_admin_username/opsman_admin_password needs to be specified
+# If you are using opsman_admin_username/opsman_admin_password, edit opsman_client_id/opsman_client_secret to be an empty value.
+# If you are using opsman_client_id/opsman_client_secret, edit opsman_admin_username/opsman_admin_password to be an empty value.
+opsman_client_id:
+opsman_client_secret:
+
+# If install pipeline has been used then the passphrase is same as the admin password
+opsman_domain_or_ip_address: ${opsman_host} #This must be your pcf_ert_domain with "opsman." as a prefix. For example, opsman.pcf.example.com
+
+# Ops Manager Url - FQDN to access Ops Manager without protocol (will use https), ex: opsmgr.example.com
+opsman_domain_or_ip_address: CHANGEME
+
+opsman_major_minor_version: ^2\.0\.[0-9]+$ # Ops Manager minor version to track (e.g ^2\.0\.[0-9]+$ will track 2.0.x versions)
+
+# Pivotal Net Token to download Ops Manager binaries from https://network.pivotal.io
+pivnet_token: ${pivnet_token} # value must be a Pivotal Network legacy token; UAA API tokens do not work currently work
+
+iaas_type: ${iaas}
+PARAMS
+  opsman_iaas_params
+}
+
+opsman_pipeline () {
+  concourse_login
+  upgrade_params
+  fly --target ${concourse_target} set-pipeline --pipeline ${om_upgrade_pipeline} \
+  --config ${om_upgrade_pipeline_file} --load-vars-from ${params_dir}/upgrade-ops-manager/${iaas}/params.yml \
+  --load-vars-from ${pcf_upgrade_parameter_file}
+}
+
+upgrade_params () {
+  cat <<PARAMS > ${pcf_upgrade_parameter_file}
+iaas_type: ${iaas}
+opsman_domain_or_ip_address: ${opsman_host} #This must be your pcf_ert_domain with "opsman." as a prefix. For example, opsman.pcf.example.com
+product_slug: elastic-runtime
+# The minor product version to track, as a regexp. To track 1.11.x of a product, this would be "^2\.0\.[0-9]+$", as shown below.
+product_version_regex: ${pas_version_regex}
+PARAMS
+}
+
+upgrade_pipeline () {
+  concourse_login
+  upgrade_params
   fly --target ${concourse_target} set-pipeline --pipeline ${pcf_upgrade_pipeline} \
-  --config ${pcf_upgrade_pipeline_file} --load-vars-from ${pcf_upgrade_parameter_file}
+  --config ${pcf_upgrade_pipeline_file} --load-vars-from ${params_dir}/upgrade-pcf/params.yml \
+  --load-vars-from ${pcf_upgrade_parameter_file}
+}
+
+# TO DO: fill in cf_* arguments
+buildpack_params () {
+  cat <<PARAMS > ${buildpack_upgrade_parameter_file}
+
+# Cloud Controller url and credentials - should have admin privileges
+cf_api_uri: https://api.${pcf_system_domain}
+cf_user: CHANGEME
+cf_password: CHANGEME
+PARAMS
+}
+
+buildpack_pipeline () {
+  concourse_login
+  upgrade_params
+  fly --target ${concourse_target} set-pipeline --pipeline ${buildpack_upgrade_pipeline} \
+  --config ${buildpack_upgrade_pipeline_file} --load-vars-from ${params_dir}/upgrade-buildpacks/params.yml \
+  --load-vars-from ${pcf_upgrade_parameter_file}
+}
+
+params () {
+  install_params
+  upgrade_params
+  opsman_params
+  buildpack_params
 }
 
 trigger() {
@@ -321,7 +362,6 @@ hijack() {
   fly --target ${concourse_target} hijack -j ${pcf_install_pipeline}/${job}
 }
 
-
 bootstrap_terraform() {
   echo "Bootstrapping PCF infrastructure..."
   trigger "bootstrap-terraform-state"
@@ -330,23 +370,6 @@ bootstrap_terraform() {
 create_infrastructure () {
   echo "Creating PCF infrastructure..."
   trigger "create-infrastructure"
-  dns
-}
-
-dns () {
-  # TODO: trap errors and delete transaction file for sanity (mayhaps just rollback with gcloud dns)
-  echo "Delegating DNS..."
-  local name_servers=( `gcloud dns managed-zones describe "${pcf_dns_zone}" --format json --project=${project} | jq -r  '.nameServers | join(" ")'` )
-  local transaction_file="${workdir}/pcf-dns-transaction-${pcf_dns_zone}.xml"
-
-  gcloud dns record-sets transaction start -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled --project=${project}
-
-  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[0]}" --transaction-file="${transaction_file}" --no-user-output-enabled --project=${project}
-  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[1]}" --transaction-file="${transaction_file}" --no-user-output-enabled --project=${project}
-  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[2]}" --transaction-file="${transaction_file}" --no-user-output-enabled --project=${project}
-  gcloud dns record-sets transaction add -z "${dns_zone}" --name "${pcf_subdomain}" --ttl "${dns_ttl}" --type NS "${name_servers[3]}" --transaction-file="${transaction_file}" --no-user-output-enabled --project=${project}
-
-  gcloud dns record-sets transaction execute -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled --project=${project}
 }
 
 configure_director() {
@@ -358,10 +381,6 @@ install() {
   bootstrap_terraform
   create_infrastructure
   configure_director
-}
-
-firewall() {
-  gcloud --project "${project}" compute firewall-rules create "pcf-${short_id}-allow-om-ssh" --allow="tcp:22" --source-ranges="0.0.0.0/0" --target-tags="pcf-${short_id}-opsman" --network="pcf-${short_id}-virt-net"
 }
 
 ldap () {
@@ -502,10 +521,6 @@ stop () {
   done
 }
 
-opsman_exec () {
-  gcloud compute ssh --project ${project} "ubuntu@pcf-${short_id}-ops-manager" --zone ${availability_zone_1} --command "${1}"
-}
-
 exec_om () {
   safe_auth > /dev/null 2>&1
   exec om --target https://opsman.${pcf_subdomain} --username `safe get ${team_secret_root}/opsman_admin_username:value` \
@@ -546,32 +561,19 @@ tunnel () {
 teardown() {
   wipe_env
   fly --target ${concourse_target} destroy-pipeline -p "${pcf_install_pipeline}"
-
-  gsutil rm -l ${storage_location} gs://${terraform_statefile_bucket}
-
-  gcloud projects remove-iam-policy-binding "${project}" --member "serviceAccount:${pcf_service_account}" --role "roles/editor" --no-user-output-enabled
-
-  gcloud projects remove-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/compute.instanceAdmin" --no-user-output-enabled
-  gcloud projects remove-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/compute.networkAdmin" --no-user-output-enabled
-  gcloud projects remove-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/compute.storageAdmin" --no-user-output-enabled
-  gcloud projects remove-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/storage.admin" --no-user-output-enabled
-  gcloud projects remove-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/cloudsql.admin" --no-user-output-enabled
-  gcloud projects remove-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/dns.admin" --no-user-output-enabled
-  gcloud projects remove-iam-policy-binding ${project} --member "serviceAccount:${pcf_service_account}" --role "roles/compute.securityAdmin" --no-user-output-enabled
-
-  pcf_key_id=`jq --raw-output '.private_key_id' "${pcf_key_file}"`
-  gcloud iam service-accounts --project "${project}" keys delete "${pcf_key_id}"  --iam-account "${pcf_service_account}"
-  gcloud iam service-accounts --project "${project}" delete "${pcf_service_account}" --no-user-output-enabled
 }
 
 if [ $# -gt 0 ]; then
   while [ $# -gt 0 ]; do
     case $1 in
-      service_accounts | accounts | security )
-        service_accounts
+      certificates | certs | ssl_certificates)
+        ssl_certificates
         ;;
-      buckets | bucket | tfstate )
-        buckets
+      patch )
+        patch
+        ;;
+      infra)
+        infra
         ;;
       prepare_concourse | prepare )
         prepare_concourse
@@ -582,14 +584,29 @@ if [ $# -gt 0 ]; then
       download)
         download
         ;;
+      modernize )
+        modernize_pipelines
+        ;;
       secrets )
         secrets
         ;;
       params )
         params
         ;;
-      pipeline | pipelines )
-        pipeline
+      pipelines )
+        pipelines
+        ;;
+      install_pipeline )
+        install_pipeline
+        ;;
+      upgrade_pipeline )
+        upgrade_pipeline
+        ;;
+      buildpack_pipeline )
+        buildpack_pipeline
+        ;;
+      opsman_pipeline )
+        opsman_pipeline
         ;;
       install )
         install
@@ -601,9 +618,6 @@ if [ $# -gt 0 ]; then
         ;;
       firewall)
         firewall
-        ;;
-      modernize_pipeline | modernize)
-        modernize_pipeline
         ;;
       bootstrap_terraform | bootstrap)
         bootstrap_terraform
@@ -663,11 +677,6 @@ if [ $# -gt 0 ]; then
         exec_om $@
         exit
         ;;
-      exec)
-        shift
-        opsman_exec $@
-        exit
-        ;;
       * )
         echo "Unrecognized option: $1" 1>&2
         exit 1
@@ -678,13 +687,16 @@ if [ $# -gt 0 ]; then
   exit
 fi
 
-service_accounts
+ssl_certificates
+patch
+infra
+
 prepare_concourse
 concourse_login
-buckets
 download
+set -e
 secrets
 params
-pipeline
+pipelines
 install
 ldap

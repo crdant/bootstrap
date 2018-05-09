@@ -5,3 +5,4 @@ work/*
 !work/README.md
 state
 .DS_Store
+.terraform

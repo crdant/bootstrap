@@ -8,32 +8,33 @@ BASEDIR=$(dirname $(dirname $0))
 
 stemcell_version=3468.15
 stemcell_checksum=1788c8dafbb93e16ca3637f8c84052a0218675f0
-concourse_version=3.8.0
-concourse_checksum=99e134676df72e18c719ccfbd7977bd9449e6fd4
-garden_version=1.10.0
-garden_checksum=9c2ad4a961db49a5349a26d4240b8f8b9b54af88
-postgres_version=23
-postgres_checksum=4b5265bfd5f92cf14335a75658658a0db0bca927
+concourse_version=3.13.0
+concourse_checksum=aaa4e4d42adb2293abc79422351ca71ed548f95c
+garden_version=1.13.1
+garden_checksum=54cbb89cae1be0708aa056185671665d7f4b2a4f
+postgres_version=28
+postgres_checksum=c1fcec62cb9d2e95e3b191e3c91d238e2b9d23fa
 
 concourse_host="concourse.${subdomain}"
 concourse_url="https://${concourse_host}"
 concourse_user=admin
 
 concourse_cert_cn="${concourse_host}"
-concourse_key_file="${ca_dir}/${concourse_host}.key"
-concourse_cert_file="${ca_dir}/${concourse_host}.crt"
+export concourse_cert_file=${ca_dir}/${concourse_host}/cert.pem
+export concourse_key_file=${ca_dir}/${concourse_host}/privkey.pem
+export concourse_chain_file=${ca_dir}/${concourse_host}/chain.pem
 
 ssl_certificates () {
   echo "Creating SSL certificate..."
 
-  common_name="${concourse_cert_cn}"
-  create_certificate "${common_name}" 
+  common_name="${concourse_host}"
+  org_unit="${env_id} Platform Automation"
 
-  echo "SSL certificate created and stored at ${ca_dir}/${common_name}.crt, private key stored at ${ca_dir}/${common_name}.key."
+  create_certificate ${common_name} --domain "${concourse_host}"
 }
 
 stemcell () {
-  bosh -e "${env_id}" upload-stemcell https://bosh.io/d/stemcells/bosh-google-kvm-ubuntu-trusty-go_agent?v=${stemcell_version} --sha1 ${stemcell_checksum}
+  bosh -e "${env_id}" upload-stemcell https://bosh.io/d/stemcells/bosh-${stemcell_iaas}-ubuntu-trusty-go_agent?v=${stemcell_version}
 }
 
 releases () {
@@ -48,11 +49,12 @@ safe_auth () {
 
 vars () {
   atc_vault_token=`jq --raw-output '.auth.client_token' ${key_dir}/atc-${env_id}-token.json`
-  vault_cert_file=${ca_dir}/vault.${subdomain}.crt
-  concourse_password=`safe get secret/bootstrap/concourse/admin:value`
+  vault_cert_file=${ca_dir}/vault.${subdomain}/cert.pem
+  concourse_password="$(safe get secret/bootstrap/concourse/admin:value)"
   cat <<VAR_ARGUMENTS
-    --var concourse-url="${concourse_url}" --var concourse-user=${concourse_user} --var concourse-password=${concourse_password} --var atc-vault-token=${atc_vault_token}
-    --var-file atc-cert-file=${concourse_cert_file} --var-file atc-key-file=${concourse_key_file} --var-file vault-cert-file=${vault_cert_file}
+    --var concourse-url="${concourse_url}" --var concourse-user=${concourse_user} --var concourse-password=${concourse_password}
+    --var-file atc-cert-file=${concourse_cert_file} --var-file atc-key-file=${concourse_key_file}
+    --var atc-vault-token=${atc_vault_token}  --var-file vault-cert-file=${vault_cert_file}
 VAR_ARGUMENTS
 }
 
@@ -61,32 +63,28 @@ interpolate () {
   bosh interpolate "${manifest}" `vars`
 }
 
+patch () {
+  local job="concourse"
+  set -x
+  bbl plan --state-dir ${state_dir} --lb-type concourse
+  cp -r ${patch_dir}/${iaas}/${job}/terraform/. ${state_dir}/terraform
+
+  cat <<TFVARS > ${state_dir}/vars/${job}.tfvars
+concourse_host="${concourse_host}"
+TFVARS
+
+}
+
+infra () {
+  bbl up --state-dir ${state_dir}
+}
+
 deploy () {
   local manifest=${manifest_dir}/concourse.yml
   admin_password=`generate_passphrase 4`
   safe_auth_bootstrap
   safe set secret/bootstrap/concourse/admin value="${admin_password}"
   bosh -n -e "${env_id}" -d concourse deploy "${manifest}" `vars`
-}
-
-lbs () {
-  echo "Configuring load balancers..."
-  bbl create-lbs --debug --state-dir ${state_dir} --type concourse --cert ${lb_cert_file} --key ${lb_key_file} --gcp-service-account-key "${key_file}"
-}
-
-dns() {
-  echo "Setting up DNS..."
-
-  local transaction_file="${workdir}/concourse-dns-transaction-${dns_zone}.xml"
-
-  gcloud dns record-sets --project "${project}" transaction start -z "${dns_zone}" --transaction-file="${transaction_file}" --no-user-output-enabled
-
-  # set up the load balancer in DNS
-  lb_address=`gcloud compute --project ${project} forwarding-rules describe ${env_id}-concourse-https --region ${region} --format json | jq --raw-output '.IPAddress'`
-  gcloud dns record-sets --project ${project} transaction add -z "${dns_zone}" --name "${concourse_host}" --ttl "${dns_ttl}" --type A "${lb_address}" --transaction-file="${transaction_file}"
-  gcloud dns record-sets --project ${project} transaction execute -z "${dns_zone}" --transaction-file="${transaction_file}"
-
-  rm "${transaction_file}"
 }
 
 login () {
@@ -121,8 +119,6 @@ teardown () {
   lb_address=`gcloud compute --project ${project} forwarding-rules describe ${env_id}-concourse-https --region ${region} --format json | jq --raw-output '.IPAddress'`
   gcloud dns record-sets --project ${project} transaction remove -z "${dns_zone}" --name "${concourse_host}" --ttl "${dns_ttl}" --type A "${lb_address}" --transaction-file="${transaction_file}"
   gcloud dns record-sets --project ${project} transaction execute -z "${dns_zone}" --transaction-file="${transaction_file}"
-
-  bbl delete-lbs --gcp-service-account-key "${key_file}"
 }
 
 
@@ -144,8 +140,8 @@ if [ $# -gt 0 ]; then
       stemcell )
         stemcell
         ;;
-      release )
-        release
+      release | releases )
+        releases
         ;;
       deploy )
         deploy
@@ -155,11 +151,11 @@ if [ $# -gt 0 ]; then
         releases
         deploy
         ;;
-      lbs )
-        lbs
+      patch )
+        patch
         ;;
-      dns )
-        dns
+      infra )
+        infra
         ;;
       init )
         ;;
@@ -201,7 +197,7 @@ fi
 ssl_certificates
 stemcell
 releases
-lbs
+patch
+infra
 deploy
-dns
 login
