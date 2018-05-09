@@ -50,8 +50,13 @@ resource "aws_iam_policy" "bbl" {
 POLICY
 }
 
+resource "aws_iam_user_policy_attachment" "bbl" {
+  user       = "${aws_iam_user.bbl.name}"
+  policy_arn = "${aws_iam_policy.bbl.arn}"
+}
+
 resource "aws_iam_role_policy_attachment" "bbl" {
-  role       = "${var.env_id}_bbl_role"
+  role       = "${aws_iam_role.bbl.name}"
   policy_arn = "${aws_iam_policy.bbl.arn}"
 }
 
