@@ -1,3 +1,7 @@
+variable "short_id" {
+  type = "string"
+}
+
 resource "aws_iam_role" "pcf" {
   name = "${var.env_id}_pcf_role"
   path = "/"
@@ -32,13 +36,63 @@ resource "aws_iam_policy" "pcf" {
   "Version": "2012-10-17",
   "Statement": [
     {
-        "Effect": "Deny",
+        "Sid": "PcfInfrastructureCreateIAM",
+        "Effect": "Allow",
         "Action": [
             "iam:*"
         ],
         "Resource": [
-            "*"
+            "arn:aws:iam::*:user/${var.short_id}*",
+            "arn:aws:iam::*:user/system/${var.short_id}*",
+            "arn:aws:iam::*:role/${var.short_id}*",
+            "arn:aws:iam::*:instance-profile/${var.short_id}*",
+            "arn:aws:iam::*:policy/${var.short_id}*"
         ]
+    },
+    {
+        "Sid": "PcfInfrastructureCreateVpc",
+        "Effect": "Allow",
+        "Action": [
+            "ec2:*Vpc*",
+            "ec2:*Subnet*",
+            "ec2:*Gateway*",
+            "ec2:*Route*",
+            "ec2:*Address*",
+            "ec2:*SecurityGroup*",
+            "ec2:*NetworkAcl*",
+            "ec2:*DhcpOptions*"
+        ],
+        "Resource": "*"
+    },
+    {
+        "Sid": "PcfInfrastructureDNS",
+        "Effect": "Allow",
+        "Action": [
+            "route53:GetHostedZone",
+            "route53:ListHostedZones",
+            "route53:ChangeResourceRecordSets",
+            "route53:ListResourceRecordSets",
+            "route53:GetHostedZoneCount",
+            "route53:ListHostedZonesByName",
+            "route53:GetChange"
+        ],
+        "Resource": "*"
+    },
+    {
+        "Sid": "PcfInfrastructureRDS",
+        "Effect": "Allow",
+        "Action": [
+            "rds:*"
+        ],
+        "Resource": "*"
+    },
+    {
+        "Sid": "PcfInfrastructureELB",
+        "Effect": "Allow",
+        "Action": [
+            "elasticloadbalancing:*"
+        ],
+        "Resource": "*"
     },
     {
         "Sid": "OpsMgrInfrastructureIaasConfiguration",
@@ -59,16 +113,16 @@ resource "aws_iam_policy" "pcf" {
             "s3:*"
         ],
         "Resource": [
-            "arn:aws:s3:::pcf-ops-manager-bucket",
-            "arn:aws:s3:::pcf-ops-manager-bucket/*",
-            "arn:aws:s3:::pcf-buildpacks-bucket",
-            "arn:aws:s3:::pcf-buildpacks-bucket/*",
-            "arn:aws:s3:::pcf-packages-bucket",
-            "arn:aws:s3:::pcf-packages-bucket/*",
-            "arn:aws:s3:::pcf-resources-bucket",
-            "arn:aws:s3:::pcf-resources-bucket/*",
-            "arn:aws:s3:::pcf-droplets-bucket",
-            "arn:aws:s3:::pcf-droplets-bucket/*"
+            "arn:aws:s3:::${var.short_id}-bosh",
+            "arn:aws:s3:::${var.short_id}-bosh/*",
+            "arn:aws:s3:::${var.short_id}-buildpacks",
+            "arn:aws:s3:::${var.short_id}-buildpacks/*",
+            "arn:aws:s3:::${var.short_id}-packages",
+            "arn:aws:s3:::${var.short_id}-packages/*",
+            "arn:aws:s3:::${var.short_id}-resources",
+            "arn:aws:s3:::${var.short_id}-resources/*",
+            "arn:aws:s3:::${var.short_id}-droplets",
+            "arn:aws:s3:::${var.short_id}-droplets/*"
         ]
     },
     {
@@ -91,27 +145,26 @@ resource "aws_iam_policy" "pcf" {
         "Sid": "DeployMicroBosh",
         "Effect": "Allow",
         "Action": [
-            "ec2:DescribeImages",
+            "ec2:Describe*",
             "ec2:RunInstances",
+            "ec2:StartInstances",
+            "ec2:StopInstances",
             "ec2:DescribeInstances",
             "ec2:TerminateInstances",
             "ec2:RebootInstances",
+            "ec2:ModifyInstanceAttribute",
             "elasticloadbalancing:DescribeLoadBalancers",
             "elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
             "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
-            "ec2:DescribeAddresses",
             "ec2:DisassociateAddress",
             "ec2:AssociateAddress",
             "ec2:CreateTags",
-            "ec2:DescribeVolumes",
             "ec2:CreateVolume",
             "ec2:AttachVolume",
             "ec2:DeleteVolume",
             "ec2:DetachVolume",
             "ec2:CreateSnapshot",
-            "ec2:DeleteSnapshot",
-            "ec2:DescribeSnapshots",
-            "ec2:DescribeRegions"
+            "ec2:DeleteSnapshot"
         ],
         "Resource": "*"
     }
@@ -120,8 +173,13 @@ resource "aws_iam_policy" "pcf" {
 POLICY
 }
 
+resource "aws_iam_user_policy_attachment" "pcf" {
+  user       = "${aws_iam_user.pcf.name}"
+  policy_arn = "${aws_iam_policy.pcf.arn}"
+}
+
 resource "aws_iam_role_policy_attachment" "pcf" {
-  role       = "${var.env_id}_pcf_role"
+  role       = "${aws_iam_role.pcf.name}"
   policy_arn = "${aws_iam_policy.pcf.arn}"
 }
 
