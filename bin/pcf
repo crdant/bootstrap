@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 BASEDIR=$(dirname $(dirname $0))
 . "${BASEDIR}/lib/env.sh"
+. "${BASEDIR}/lib/env.sh"
 . "${BASEDIR}/lib/secrets.sh"
 . "${BASEDIR}/lib/generate_passphrase.sh"
 . "${BASEDIR}/lib/certificates.sh"
+
+# allow for iaas customizations
+if [ -f ${lib_dir}/${iaas}/pcf.sh ] ; then
+  . ${lib_dir}/${iaas}/pcf.sh
+fi
 
 concourse_team=pcf
 concourse_target=${env_id}-${concourse_team}
@@ -15,12 +21,20 @@ pcf_pipelines_local=${workdir}/pcf-pipelines
 pcf_pipelines_version="v0.23.0"
 
 pcf_install_pipeline="deploy-pcf"
-pcf_install_pipeline_file="${workdir}/pcf-pipelines/install-pcf/gcp/pipeline.yml"
+pcf_install_pipeline_file="${workdir}/pcf-pipelines/install-pcf/${iaas}/pipeline.yml"
 pcf_install_parameter_file="${workdir}/${env_id}-${pcf_install_pipeline}-params.yml"
 
 pcf_upgrade_pipeline="upgrade-pcf"
 pcf_upgrade_pipeline_file="${workdir}/pcf-pipelines/upgrade-tile/pipeline.yml"
 pcf_upgrade_parameter_file="${workdir}/${env_id}-${pcf_upgrade_pipeline}-params.yml"
+
+om_upgrade_pipeline="upgrade-ops-manager"
+om_upgrade_pipeline_file="${workdir}/pcf-pipelines/upgrade-ops-manager/${iaas}/pipeline.yml"
+om_upgrade_parameter_file="${workdir}/${env_id}-${om_upgrade_pipeline}-params.yml"
+
+buildpack_upgrade_pipeline="upgrade-buildpacks"
+buildpack_upgrade_pipeline_file="${workdir}/pcf-pipelines/upgrade-buildpacks/pipeline.yml"
+buildpack_upgrade_parameter_file="${workdir}/${env_id}-${buildpack_upgrade_pipeline}-params.yml"
 
 ops_dir=${BASEDIR}/pipelines/ops
 
@@ -32,27 +46,37 @@ pcf_dns_zone="pcf-${short_id}-zone"         # TO DO: See if I can get this from 
 pcf_subdomain="pcf.${subdomain}"
 pcf_system_domain="system.${pcf_subdomain}"
 pcf_apps_domain="apps.${pcf_subdomain}"
-opsman_host="manager.${pcf_subdomain}"
-
-terraform_statefile_bucket="${env_id}-bucket"
+opsman_host="opsman.${pcf_subdomain}"
 
 mysql_backup_bucket=${short_id}-mysql-backups
 mysql_backup_schedule="0 0/72 * * *"
 
 team_secret_root="concourse/${concourse_team}"
 deploy_secret_root="concourse/${concourse_team}/${pcf_install_pipeline}"
+buildpack_secret_root="concourse/${concourse_team}/${buildpack_upgrade_pipeline}"
 
 pre_patch() {
   local job="pcf_pre"
 
   cp -r ${patch_dir}/${iaas}/${job}/terraform/. ${state_dir}/terraform
   cat <<TFVARS > ${state_dir}/vars/${job}.tfvars
+key_dir="${key_dir}"
 pcf_subdomain="${pcf_subdomain}"
+pcf_wildcard_cert=<<CERT
+$(cat ${ca_dir}/${pcf_subdomain}/cert.pem)
+CERT
+pcf_wildcard_key=<<KEY
+$(cat ${ca_dir}/${pcf_subdomain}/privkey.pem)
+KEY
+pcf_wildcard_chain=<<CHAIN
+$(cat ${ca_dir}/${pcf_subdomain}/chain.pem)
+CHAIN
 TFVARS
 }
 
 infra() {
   bbl up --state-dir ${state_dir} --debug
+
 }
 
 post_patch() {
@@ -84,12 +108,28 @@ download () {
   pivnet login --api-token ${PIVNET_TOKEN}
   pivnet download-product-files --product-slug pcf-automation --release-version ${pcf_pipelines_version} --download-dir ${workdir} --glob "pcf-pipelines-${pcf_pipelines_version}.tgz" --accept-eula
   tar -xzf "${workdir}/pcf-pipelines-${pcf_pipelines_version}.tgz" -C "${workdir}"
-  modernize_pipeline
-  adapt_pipeline
+  modernize_pipelines
+  adapt_pipelines
 }
 
-adapt_pipeline() {
-  ops_file_args="$(find ${ops_dir}/*.yml | sort | sed 's/^/-o /' | xargs)"
+modernize_pipelines() {
+  sed -i -e 's/{{/((/g' "${pcf_install_pipeline_file}"
+  sed -i -e 's/}}/))/g' "${pcf_install_pipeline_file}"
+  sed -i -e 's/{{/((/g' "${pcf_upgrade_pipeline_file}"
+  sed -i -e 's/}}/))/g' "${pcf_upgrade_pipeline_file}"
+  sed -i -e 's/{{/((/g' "${om_upgrade_pipeline_file}"
+  sed -i -e 's/}}/))/g' "${om_upgrade_pipeline_file}"
+  sed -i -e 's/{{/((/g' "${buildpack_upgrade_pipeline_file}"
+  sed -i -e 's/}}/))/g' "${buildpack_upgrade_pipeline_file}"
+
+  # new style parameter substitution doesn't let values be blank so we put those back
+  sed -i -e 's/((opsman_client_id))/{{opsman_client_id}}/g' "${pcf_install_pipeline_file}"
+  sed -i -e 's/((opsman_client_secret))/{{opsman_client_secret}}/g' "${pcf_install_pipeline_file}"
+}
+
+adapt_pipelines() {
+  ops_file_args="$(find ${ops_dir}/*.yml 2>/dev/null | sort | sed 's/^/-o /' | xargs)"
+  cp ${pcf_install_pipeline_file} ${pcf_install_pipeline_file}.orig
   cat "${pcf_install_pipeline_file}.orig" | yaml-patch ${ops_file_args} > ${pcf_install_pipeline_file}
 }
 
@@ -136,77 +176,71 @@ get_credential () {
 
 ssl_certificates () {
   echo "Creating SSL certificate for ERT..."
+  create_certificate "${pcf_subdomain}" \
+    --domain "${pcf_subdomain}" --domain "*.${pcf_apps_domain}" --domain "*.login.${pcf_system_domain}" \
+    --domain "*.uaa.${pcf_system_domain}" --domain "*.${pcf_system_domain}"
 
-  common_name="${pcf_subdomain}"
-  org_unit="Continuous Delivery"
-
-  request_certificate ${common_name} ${org_unit} --domain
-  echo "SSL certificate for ERT created and stored at ${ca_dir}/${common_name}.crt, private key stored at ${ca_dir}/${common_name}.key."
+  # needed because AWS load balancers require the certificate to be imported into AWS ACM before they are assigned
+  echo "SSL certificate for ERT created and stored at ${ca_dir}/${pcf_subdomain}/cert.pem, private key stored at ${ca_dir}/${pcf_subdomain}/privkey.pem."
 }
 
 secrets () {
   safe_auth
 
-  safe set ${team_secret_root}/gcp_service_account_key value="$(cat ${pcf_key_file})"
-
   # N.B. set these two on your own, No API for them
-  # safe set ${deploy_secret_root}/gcp_storage_access_key value=
-  # safe set ${deploy_secret_root}/gcp_storage_secret_key:
+  # safe set ${deploy_secret_root}/${iaas}_storage_access_key value=
+  # safe set ${deploy_secret_root}/${iaas}_storage_secret_key:
   safe set ${team_secret_root}/git_private_key value="$(cat ${HOME}/.ssh/concourse_github)"
   safe set ${team_secret_root}/pivnet_token value=${PIVNET_TOKEN}
   safe set ${team_secret_root}/opsman_admin_username value=admin
   safe gen ${team_secret_root}/opsman_admin_password value
 
   # store the certificates we generated
-  create_certificate "${pcf_subdomain}" \
-    --domain "${pcf_subdomain}" --domain ".${pcf_apps_domain}" --domain "*.login.${pcf_system_domain}" \
-    --domain "*.uaa.${pcf_system_domain}" --domain "*.${pcf_system_domain}"
-
-  safe set ${deploy_secret_root}/pcf_ert_ssl_cert value="$(cat ${ca_dir}/live/${pcf_subdomain}/cert.pem)"
-  safe set ${deploy_secret_root}/pcf_ert_ssl_key value="$(cat ${ca_dir}/live/${pcf_subdomain}/privkey.pem)"
+  safe set ${deploy_secret_root}/pcf_ert_ssl_cert value="$(cat ${ca_dir}//${pcf_subdomain}/cert.pem)"
+  safe set ${deploy_secret_root}/pcf_ert_ssl_key value="$(cat ${ca_dir}//${pcf_subdomain}/privkey.pem)"
 
   # credhub
   primary_key_name="${env_id}-credhub-key-1"
-  safe set ${deploy_secret_root}/credhub_primary_encryption_name value=${primary_key_name}
+
   safe set ${deploy_secret_root}/credhub_encryption_key_name1 value=${primary_key_name}
   safe gen ${deploy_secret_root}/credhub_encryption_key_secret1 value
   safe set ${deploy_secret_root}/credhub_encryption_key_name2 value="${env_id}-credhub-key-2"
   safe gen ${deploy_secret_root}/credhub_encryption_key_secret2 value
-  safe set ${deploy_secret_root}/credhub_encryption_key_name3 value="${env_id}-credhub-key-2"
+  safe set ${deploy_secret_root}/credhub_encryption_key_name3 value="${env_id}-credhub-key-3"
   safe gen ${deploy_secret_root}/credhub_encryption_key_secret3 value
 
   # database Master Credentials
-  safe set ${deploy_secret_root}/db_master_username value=pcf-master
+  safe set ${deploy_secret_root}/db_master_username value=pcf_master
   safe gen ${deploy_secret_root}/db_master_password value
 
   # Usernames must be 16 characters or fewer
-  safe set ${deploy_secret_root}/db_diego_username value=pcf-diego
+  safe set ${deploy_secret_root}/db_diego_username value=pcf_diego
   safe gen ${deploy_secret_root}/db_diego_password value
-  safe set ${deploy_secret_root}/db_notifications_username value=pcf-notification
+  safe set ${deploy_secret_root}/db_notifications_username value=pcf_notification
   safe gen ${deploy_secret_root}/db_notifications_password value
-  safe set ${deploy_secret_root}/db_autoscale_username value=pcf-autoscale
+  safe set ${deploy_secret_root}/db_autoscale_username value=pcf_autoscale
   safe gen ${deploy_secret_root}/db_autoscale_password value
   safe set ${deploy_secret_root}/db_uaa_username value=uaa
   safe gen ${deploy_secret_root}/db_uaa_password value
-  safe set ${deploy_secret_root}/db_app_usage_service_username value=pcf-app-usage
+  safe set ${deploy_secret_root}/db_app_usage_service_username value=pcf_app_usage
   safe gen ${deploy_secret_root}/db_app_usage_service_password value
-  safe set ${deploy_secret_root}/db_ccdb_username value=pcf-ccdb
+  safe set ${deploy_secret_root}/db_ccdb_username value=pcf_ccdb
   safe gen ${deploy_secret_root}/db_ccdb_password value
-  safe set ${deploy_secret_root}/db_routing_username value=pcf-routing
+  safe set ${deploy_secret_root}/db_routing_username value=pcf_routing
   safe gen ${deploy_secret_root}/db_routing_password value
 
-  safe set ${deploy_secret_root}/db_accountdb_username value=pcf-accounts
+  safe set ${deploy_secret_root}/db_accountdb_username value=pcf_accounts
   safe gen ${deploy_secret_root}/db_accountdb_password value
-  safe set ${deploy_secret_root}/db_networkpolicyserverdb_username value=pcf-policy
+  safe set ${deploy_secret_root}/db_networkpolicyserverdb_username value=pcf_policy
   safe gen ${deploy_secret_root}/db_networkpolicyserverdb_password value
-  safe set ${deploy_secret_root}/db_nfsvolumedb_username value=pcf-nfs
+  safe set ${deploy_secret_root}/db_nfsvolumedb_username value=pcf_nfs
   safe gen ${deploy_secret_root}/db_nfsvolumedb_password value
-  safe set ${deploy_secret_root}/db_silk_username value=pcf-silk
+  safe set ${deploy_secret_root}/db_silk_username value=pcf_silk
   safe gen ${deploy_secret_root}/db_silk_password value
-  safe set ${deploy_secret_root}/db_locket_username value=pcf-locket
+  safe set ${deploy_secret_root}/db_locket_username value=pcf_locket
   safe gen ${deploy_secret_root}/db_locket_password value
 
-  safe set ${deploy_secret_root}/db_credhub_username value=pcf-credhub
+  safe set ${deploy_secret_root}/db_credhub_username value=pcf_credhub
   safe gen ${deploy_secret_root}/db_credhub_password value
 }
 
@@ -218,23 +252,22 @@ pipelines() {
 }
 
 install_params () {
+  # terraform_statefile_bucket="${env_id}-bucket"
   cat <<PARAMS > ${pcf_install_parameter_file}
-pcf_ert_domain: ${pcf_subdomain} # This is the domain you will access ERT with, for example: pcf.example.com.
+ERT_DOMAIN: ${pcf_subdomain} # This is the domain you will access ERT with, for example: pcf.example.com.
 system_domain: ${pcf_system_domain} # e.g. system.pcf.example.com
-apps_domain: ${pcf_apps_subdomain} # e.g. apps.pcf.example.com
+apps_domain: ${pcf_apps_domain} # e.g. apps.pcf.example.com
 ert_major_minor_version: ${pas_version_regex} # ERT minor version to track (e.g ^2\.0\.[0-9]+$ will track 2.0.x versions)
 mysql_monitor_recipient_email: ${email}
 opsman_domain_or_ip_address: ${opsman_host} #This must be your pcf_ert_domain with "opsman." as a prefix. For example, opsman.pcf.example.com
 opsman_major_minor_version: ${om_version_regex} # Ops Manager minor version to track (e.g ^2\.0\.[0-9]+$ will track 2.0.x versions)
-terraform_prefix: pcf-${short_id}
-pivnet_token: ${pivnet_token}
+terraform_prefix: ${short_id}
 PARAMS
   install_iaas_params
 }
 
 install_pipeline () {
   concourse_login
-  install_params
   fly --target ${concourse_target} set-pipeline --pipeline ${pcf_install_pipeline} \
     --config ${pcf_install_pipeline_file} --load-vars-from ${params_dir}/install-pcf/${iaas}/params.yml \
     --load-vars-from ${pcf_install_parameter_file}
@@ -273,8 +306,8 @@ PARAMS
 opsman_pipeline () {
   concourse_login
   upgrade_params
-  fly --target ${concourse_target} set-pipeline --pipeline ${pcf_upgrade_pipeline} \
-  --config ${pcf_upgrade_pipeline_file} --load-vars-from ${params_dir}/upgrade-pcf/params.yml \
+  fly --target ${concourse_target} set-pipeline --pipeline ${om_upgrade_pipeline} \
+  --config ${om_upgrade_pipeline_file} --load-vars-from ${params_dir}/upgrade-ops-manager/${iaas}/params.yml \
   --load-vars-from ${pcf_upgrade_parameter_file}
 }
 
@@ -296,10 +329,9 @@ upgrade_pipeline () {
   --load-vars-from ${pcf_upgrade_parameter_file}
 }
 
+# TO DO: fill in cf_* arguments
 buildpack_params () {
-  cat <<PARAMS > ${pcf_upgrade_parameter_file}
-# Pivotal Net Token to download binaries from https://network.pivotal.io
-pivnet_token: ${pivnet_token}
+  cat <<PARAMS > ${buildpack_upgrade_parameter_file}
 
 # Cloud Controller url and credentials - should have admin privileges
 cf_api_uri: https://api.${pcf_system_domain}
@@ -311,9 +343,16 @@ PARAMS
 buildpack_pipeline () {
   concourse_login
   upgrade_params
-  fly --target ${concourse_target} set-pipeline --pipeline ${pcf_upgrade_pipeline} \
-  --config ${pcf_upgrade_pipeline_file} --load-vars-from ${params_dir}/upgrade-pcf/params.yml \
+  fly --target ${concourse_target} set-pipeline --pipeline ${buildpack_upgrade_pipeline} \
+  --config ${buildpack_upgrade_pipeline_file} --load-vars-from ${params_dir}/upgrade-buildpacks/params.yml \
   --load-vars-from ${pcf_upgrade_parameter_file}
+}
+
+params () {
+  install_params
+  upgrade_params
+  opsman_params
+  buildpack_params
 }
 
 trigger() {
@@ -533,6 +572,9 @@ teardown() {
 if [ $# -gt 0 ]; then
   while [ $# -gt 0 ]; do
     case $1 in
+      certificates | certs | ssl_certificates)
+        ssl_certificates
+        ;;
       pre_patch )
         pre_patch
         ;;
@@ -550,6 +592,9 @@ if [ $# -gt 0 ]; then
         ;;
       download)
         download
+        ;;
+      modernize )
+        modernize_pipelines
         ;;
       secrets )
         secrets
@@ -651,12 +696,14 @@ if [ $# -gt 0 ]; then
   exit
 fi
 
+ssl_certificates
 pre_patch
 infra
 
 prepare_concourse
 concourse_login
 download
+set -e
 secrets
 params
 pipelines

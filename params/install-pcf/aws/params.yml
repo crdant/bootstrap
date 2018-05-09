@@ -1,7 +1,7 @@
 # AMI to use for nat box
 # Update with the correct NAT AMI for your region. List of AMIs can be found
 # here: https://github.com/pivotal-cf/terraforming-aws/blob/master/nat.tf
-amis_nat: ami-303b1458
+amis_nat: ami-69ae8259
 
 # Ciphers
 # An ordered, colon-delimited list of Golang supported TLS cipher suites in OpenSSL format.
@@ -9,6 +9,20 @@ amis_nat: ami-303b1458
 # The recommended settings are filled in below, change as necessary.
 router_tls_ciphers: "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384"
 haproxy_tls_ciphers: "DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384"
+
+# For credhub integration, replace dummy values in the following structure
+# and set the number of credhub instances in resource config to 2
+credhub_encryption_keys: |
+  - name: ((credhub_encryption_key_name1))
+    key:
+      secret: ((credhub_encryption_key_secret1))
+    primary: true
+  - name: ((credhub_encryption_key_name2))
+    key:
+      secret: ((credhub_encryption_key_secret2))
+  - name: ((credhub_encryption_key_name3))
+    key:
+      secret: ((credhub_encryption_key_secret3))
 
 # C2C Networking network CIDR
 container_networking_nw_cidr: 10.255.0.0/16
@@ -48,16 +62,25 @@ haproxy_backend_ca:         # Required if haproxy_forward_tls is enabled - HAPro
 # Whether or not the ERT VMs are internet connected.
 internet_connected: false
 
+# MySQL backup is handled in the `pcf` script file, but these params need to be blank for the pipeline's SCP option
+mysql_backups_scp_cron_schedule:
+mysql_backups_scp_destination:
+mysql_backups_scp_key:
+mysql_backups_scp_port:
+mysql_backups_scp_server:
+mysql_backups_scp_user:
+
 # CIDRs to allow HTTPS access to Operations Manager from
-opsman_allow_https_cidr_ranges:
+opsman_allow_https_cidr_ranges: 0.0.0.0/0
 
 # CIDRs to allow SSH access to Operations Manager from; configure PEM as well with the private key
-opsman_allow_ssh_cidr_ranges:
+opsman_allow_ssh_cidr_ranges: 0.0.0.0/0
+
+opsman_client_id:
+opsman_client_secret:
 
 # Optional. If blank the cert(s) will be generated:
-poe_ssl_name1:
-poe_ssl_cert1:
-poe_ssl_key1:
+networking_poe_ssl_certs:
 
 # Optional - these certificates can be used to validate the certificates from incoming client requests.
 # All CA certificates should be appended together into a single collection of PEM-encoded entries.
@@ -68,9 +91,6 @@ routing_disable_http: false
 
 # Support for the X-Forwarded-Client-Cert header. Possible values: (load_balancer|ha_proxy|router)
 routing_tls_termination: load_balancer
-
-# For terraform state file (http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region)
-S3_ENDPOINT: https://s3.amazonaws.com
 
 # Setting appropriate Application Security Groups is critical for a secure
 # deployment. Change the value of the param below to "X" to acknowledge that
