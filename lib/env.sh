@@ -1,5 +1,6 @@
 account=cdantonio@pivotal.io
 email=${account}
+pivnet_token=${PIVNET_TOKEN}
 domain=crdant.io
 iaas=aws
 
@@ -17,11 +18,15 @@ patch_dir="${BASEDIR}/patches"
 workdir="${BASEDIR}/work"
 etc_dir="${BASEDIR}/etc"
 manifest_dir="${BASEDIR}/manifests"
+params_dir="${BASEDIR}/params"
 
 # certificate configuration
 certbot_dir=/usr/local/etc/certbot
 ca_dir=${certbot_dir}/live
 ca_cert_file=${key_dir}/letsencrypt.pem
+
+cloud_config_vars_file=${state_dir}/vars/cloud-config-vars.yml
+bbl_terraform_vars_file=${state_dir}/vars/bbl.tfvars
 
 . ${lib_dir}/${iaas}/env.sh
 . ${lib_dir}/${iaas}/bbl_env.sh
@@ -39,4 +44,10 @@ dns_ttl=60
 
 if [ -f "${workdir}/bbl-env.sh" ] ; then
   . ${workdir}/bbl-env.sh
+fi
+
+if [ -f "${bbl_terraform_vars_file}" ] ; then
+  bbl_vars="$(sed -e 's/:[^:\/\/]/="/;' ${bbl_terraform_vars_file} | grep "^short_env_id")"
+  eval "${bbl_vars}"
+  short_id=${short_env_id}
 fi

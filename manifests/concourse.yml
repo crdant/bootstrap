@@ -51,15 +51,15 @@ instance_groups:
           name: concourse
           password: ((postgres_password))
 
-      # vault:
-      #   url: https://10.0.31.195:8200
-      #   auth:
-      #     backend: token
-      #     client_token: ((atc-vault-token))
-      #   tls:
-      #     ca_cert:
-      #       certificate: ((vault-cert-file))
-      #     insecure_skip_verify: true
+      vault:
+        url: https://10.0.31.195:8200
+        auth:
+          backend: token
+          client_token: ((atc-vault-token))
+        tls:
+          ca_cert:
+            certificate: ((vault-cert-file))
+          insecure_skip_verify: true
 
 
   - name: tsa
