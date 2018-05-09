@@ -11,5 +11,5 @@ resource "aws_route53_zone" "bootstrap_dns_zone" {
 }
 
 output "bootstrap_dns_zone_id" {
-  value = "${aws_route53_zone.bootstrap_dns_zone.zone_id}"
+  value = "${aws_route53_zone.bootstrap_dns_zone.id}"
 }
