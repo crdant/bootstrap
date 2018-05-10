@@ -92,9 +92,6 @@ if [ $# -gt 0 ]; then
       login )
         login
         ;;
-      trust )
-        trust
-        ;;
       * )
         echo "Unrecognized option: $1" 1>&2
         exit 1

@@ -1,5 +1,4 @@
-account=cdantonio@pivotal.io
-email=${account}
+email=cdantonio@pivotal.io
 pivnet_token=${PIVNET_TOKEN}
 domain=crdant.io
 iaas=aws
