@@ -12,7 +12,7 @@ download () {
 
   mkdir -p ${workdir}/${product_slug}/${release_version}
   pivnet download-product-files --product-slug ${product_slug} --release-version ${release_version} \
-    --glob '*google*.tgz' --download-dir=${workdir}/${product_slug}/${release_version} --accept-eula
+    --glob "*${stemcell_iaas}*.tgz" --download-dir=${workdir}/${product_slug}/${release_version} --accept-eula
 }
 
 upload () {
