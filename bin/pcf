@@ -383,6 +383,52 @@ install() {
   configure_director
 }
 
+credhub () {
+  pcf_properties="$(exec_om curl --path /api/v0/staged/products/cf-cca4a3f938478cc90986/properties 2>/dev/null)"
+  database_host="$(echo $pcf_properties | jq --raw-output '.properties.".properties.system_database.external.host".value')"
+  database_port="$(echo $pcf_properties | jq --raw-output '.properties.".properties.system_database.external.port".value')"
+
+  updated_resources="$(exec_om curl --path /api/v0/staged/products/cf-cca4a3f938478cc90986/resources 2>/dev/null | jq '{ "resources": .resources | map(if .identifier == "credhub" then .instances = 1 else .instances = .instances end ) }')"
+
+  credhub_properties=$(
+    jq -n \
+      --arg database_host  "${database_host}" \
+      --arg database_port  "${database_port}" \
+      --arg database_username "$(safe get ${deploy_secret_root}/db_credhub_username:value)" \
+      --arg database_password "$(safe get ${deploy_secret_root}/db_credhub_password:value)" \
+      --arg database_ca_cert  "$(curl https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem)" \
+      '
+      {
+        ".properties.credhub_database": {
+          "value": "external",
+        },
+        ".properties.credhub_database.external.host": {
+          "value": $database_host,
+        },
+        ".properties.credhub_database.external.port": {
+          "value": $database_port,
+        },
+        ".properties.credhub_database.external.username": {
+          "value": $database_username,
+        },
+        ".properties.credhub_database.external.password": {
+          "value": {
+            "secret": $database_password
+          }
+        },
+        ".properties.credhub_database.external.tls_ca": {
+          "value": $database_ca_cert,
+        }
+      }
+      '
+  )
+
+  om --target https://opsman.${pcf_subdomain} --username `safe get ${team_secret_root}/opsman_admin_username:value` \
+      --password `safe get ${team_secret_root}/opsman_admin_password:value` --skip-ssl-validation \
+    configure-product --product-name cf --product-properties "${credhub_properties}" \
+      --product-resources "${updated_resources}"
+}
+
 ldap () {
   ldap_url=`ldap url`
   ldap_host=`echo ${ldap_url} | cut -d: -f2 | sed -e 's#//##g'`
@@ -634,6 +680,9 @@ if [ $# -gt 0 ]; then
       dns)
         dns
         ;;
+      credhub)
+        credhub
+        ;;
       ldap)
         ldap
         ;;
@@ -699,4 +748,5 @@ secrets
 params
 pipelines
 install
+credhub
 ldap
