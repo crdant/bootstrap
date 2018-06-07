@@ -1,0 +1,25 @@
+### Add a resource that includes the bootstrap source code to access custom tasks and terraform
+- op: add
+  path: /resources/-
+  value:
+    name: bootstrap
+    type: git
+    source:
+      uri: https://github.com/crdant/bootstrap.git
+      branch: gcp-plan-patches
+
+### Use the bootstrap code when creating the infrastructure
+- op: replace
+  path: /jobs/name=create-infrastructure/plan/0/aggregate/0/do/get=pcf-pipelines-tarball
+  value:
+    do:
+    - get: bootstrap
+    - get: pcf-pipelines-tarball
+
+- op: add
+  path: /jobs/name=create-infrastructure/plan/0/aggregate/0/do/-
+  value:
+    task: harden-network
+    file: bootstrap/pipelines/tasks/harden-network/task.yml
+    params:
+      iaas: ((iaas))

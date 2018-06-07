@@ -1,0 +1,15 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: pcfnorm/rootfs
+inputs:
+  - name: pcf-pipelines
+  - name: bootstrap
+outputs:
+  - name: pcf-pipelines
+
+run:
+  path: bootstrap/pipelines/tasks/harden-network/task.sh
