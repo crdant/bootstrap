@@ -40,12 +40,12 @@ resource "aws_iam_policy" "blobstore_access" {
                     "arn:aws:s3:::${aws_s3_bucket.bosh.bucket}/*",
                     "arn:aws:s3:::${aws_s3_bucket.buildpacks.bucket},
                     "arn:aws:s3:::${aws_s3_bucket.buildpacks.bucket}/*",
-                    "arn:aws:s3:::${aws_s3_bucket.buildpacks.droplets},
-                    "arn:aws:s3:::${aws_s3_bucket.buildpacks.droplets}/*",
-                    "arn:aws:s3:::${aws_s3_bucket.buildpacks.packages},
-                    "arn:aws:s3:::${aws_s3_bucket.buildpacks.packages}/*",
-                    "arn:aws:s3:::${aws_s3_bucket.buildpacks.resources},
-                    "arn:aws:s3:::${aws_s3_bucket.buildpacks.resources}/*" ]
+                    "arn:aws:s3:::${aws_s3_bucket.droplets.bucket},
+                    "arn:aws:s3:::${aws_s3_bucket.droplets.bucket}/*",
+                    "arn:aws:s3:::${aws_s3_bucket.packages.bucket},
+                    "arn:aws:s3:::${aws_s3_bucket.packages.bucket}/*",
+                    "arn:aws:s3:::${aws_s3_bucket.resources.bucket},
+                    "arn:aws:s3:::${aws_s3_bucket.resources.bucket}/*" ]
     }
   ]
 }
