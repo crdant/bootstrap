@@ -44,8 +44,8 @@ pcf_key_file=${key_dir}/${project}-${pcf_service_account_name}.json
 pcf_dns_zone="pcf-${short_id}-zone"         # TO DO: See if I can get this from the Terraform state (or even the pipelines terraform file)
 
 pcf_subdomain="pcf.${subdomain}"
-pcf_system_domain="system.${pcf_subdomain}"
-pcf_apps_domain="apps.${pcf_subdomain}"
+pcf_system_domain="sys.${pcf_subdomain}"
+pcf_apps_domain="cfapps.${pcf_subdomain}"
 opsman_host="opsman.${pcf_subdomain}"
 
 mysql_backup_bucket=${short_id}-mysql-backups
