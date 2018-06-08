@@ -25,5 +25,6 @@ cloudfront_ips=${cloudfront_ips}
 TFVARS
 }
 
+copy_templates
 get_ips
 write_var_file
