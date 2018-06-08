@@ -3,22 +3,6 @@
 */
 
 /*
-  Whitelist variables
- */
-
-variable "github_ips" {
-  type = "list"
-}
-
-variable "ec2_ips" {
-  type = "list"
-}
-
-variable "cloudfront_ips" {
-  type = "list"
-}
-
-/*
   Ops Manager Security group
 */
 resource "aws_security_group" "directorSG" {

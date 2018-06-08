@@ -2,8 +2,6 @@
 
 set -eu
 
-var_file=pcf-pipelines/install-pcf/${iaas}/terraform/harden.auto.tfvars
-
 copy_templates () {
   cp -R pcf-pipelines-base/* pcf-pipelines
   cp bootstrap/pipelines/tasks/harden-network/${iaas}/terraform/*.tf pcf-pipelines/install-pcf/${iaas}/terraform
@@ -15,13 +13,29 @@ get_ips() {
   github_ips=$(curl -s https://api.github.com/meta | jq '.git')
 }
 
+# write the variables to a template with default values
+# this is a hack right due to https://github.com/hashicorp/terraform/issues/16197
 write_var_file() {
+  var_file=pcf-pipelines/install-pcf/${iaas}/terraform/harden-vars.tf
   cat <<TFVARS > ${var_file}
-github_ips=${github_ips}
+/*
+  Whitelist variables
+ */
 
-ec2_ips=${ec2_ips}
+variable "github_ips" {
+  type = "list"
+  default = ${github_ips}
+}
 
-cloudfront_ips=${cloudfront_ips}
+variable "ec2_ips" {
+  type = "list"
+  default = ${ec2_ips}
+}
+
+variable "cloudfront_ips" {
+  type = "list"
+  default = ${cloudfront_ips}
+}
 TFVARS
 }
 
