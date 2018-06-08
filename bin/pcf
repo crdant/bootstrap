@@ -248,6 +248,7 @@ pipelines() {
 install_params () {
   # terraform_statefile_bucket="${env_id}-bucket"
   cat <<PARAMS > ${pcf_install_parameter_file}
+iaas: ${iaas}
 ERT_DOMAIN: ${pcf_subdomain} # This is the domain you will access ERT with, for example: pcf.example.com.
 system_domain: ${pcf_system_domain} # e.g. system.pcf.example.com
 apps_domain: ${pcf_apps_domain} # e.g. apps.pcf.example.com
