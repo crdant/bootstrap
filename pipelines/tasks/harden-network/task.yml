@@ -13,3 +13,7 @@ outputs:
 
 run:
   path: bootstrap/pipelines/tasks/harden-network/task.sh
+
+params:
+  iaas
+  region

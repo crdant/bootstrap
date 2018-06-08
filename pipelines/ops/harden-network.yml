@@ -31,3 +31,4 @@
     file: bootstrap/pipelines/tasks/harden-network/task.yml
     params:
       iaas: ((iaas))
+      region: ((aws_region))
