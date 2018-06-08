@@ -17,7 +17,7 @@ resource "aws_iam_policy" "blobstore_access" {
 {
   "Statement": [
     {
-      "Sid": "Access-to-specific-bucket-only",
+      "Sid": "Access-to-blobstore-buckets-only",
       "Principal": "*",
       "Action": [
         "s3:GetObject",
