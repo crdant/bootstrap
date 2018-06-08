@@ -22,7 +22,7 @@ resource "aws_vpc_endpoint" "s3" {
 }
 
 resource "aws_iam_policy" "blobstore_access" {
-  name = "${var.env_id}_bbl_policy"
+  name = "blobstore_endpoint_access_policy"
   path = "/"
 
   policy = <<POLICY
