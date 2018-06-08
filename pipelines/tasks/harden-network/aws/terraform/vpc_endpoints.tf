@@ -9,18 +9,6 @@ resource "aws_vpc_endpoint" "ec2" {
   ]
 }
 
-resource "aws_vpc_endpoint" "s3" {
-  vpc_id             = "${aws_vpc.PcfVpc.id}"
-  service_name       = "com.amazonaws.${var.aws_region}.s3"
-  vpc_endpoint_type  = "Gateway"
-
-  policy             = "${aws_iam_policy.blobstore_access.arn}"
-  security_group_ids = [
-    "${aws_security_group.cloud_controller.id}",
-    "${aws_security_group.directorSG.id}"
-  ]
-}
-
 resource "aws_iam_policy" "blobstore_access" {
   name = "blobstore_endpoint_access_policy"
   path = "/"
@@ -50,4 +38,16 @@ resource "aws_iam_policy" "blobstore_access" {
   ]
 }
 POLICY
+}
+
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id             = "${aws_vpc.PcfVpc.id}"
+  service_name       = "com.amazonaws.${var.aws_region}.s3"
+  vpc_endpoint_type  = "Gateway"
+
+  policy             = "${aws_iam_policy.blobstore_access.arn}"
+  security_group_ids = [
+    "${aws_security_group.cloud_controller.id}",
+    "${aws_security_group.directorSG.id}"
+  ]
 }
