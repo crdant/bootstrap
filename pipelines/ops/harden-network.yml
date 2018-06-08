@@ -28,7 +28,7 @@
   path: /jobs/name=create-infrastructure/plan/0/aggregate/0/do/-
   value:
     task: harden-network
-    file: bootstrap/pipelines/tasks/harden-network/task.yml
+    file: bootstrap/pipelines/tasks/harden-network/aws/task.yml
     params:
       iaas: ((iaas))
       region: ((aws_region))

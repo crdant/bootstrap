@@ -12,7 +12,7 @@ outputs:
   - name: pcf-pipelines
 
 run:
-  path: bootstrap/pipelines/tasks/harden-network/task.sh
+  path: bootstrap/pipelines/tasks/harden-network/aws/task.sh
 
 params:
   iaas:
