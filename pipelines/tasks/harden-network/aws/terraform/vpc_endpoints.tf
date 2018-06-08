@@ -14,7 +14,7 @@ resource "aws_vpc_endpoint" "s3" {
   service_name       = "com.amazonaws.${var.aws_region}.s3"
   vpc_endpoint_type  = "Gateway"
 
-  policy             = "${aws_iam_policy.blobstore_access}"
+  policy             = "${aws_iam_policy.blobstore_access.arn}"
   security_group_ids = [
     "${aws_security_group.cloud_controller.id}",
     "${aws_security_group.directorSG.id}"
