@@ -16,6 +16,14 @@
     - get: bootstrap
     - get: pcf-pipelines-tarball
 
+### rename the pcf-pipelines output for input to hardening
+- op: replace
+  path: /jobs/name=create-infrastructure/plan/0/aggregate/0/do/task=unpack-tarball/config/outputs/name=pcf-pipelines
+  value:
+    name: pcf-pipelines-base
+    path: ""
+
+### add a task to include the hardening terraform templates
 - op: add
   path: /jobs/name=create-infrastructure/plan/0/aggregate/0/do/-
   value:
