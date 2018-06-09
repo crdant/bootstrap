@@ -115,19 +115,61 @@ resource "aws_security_group" "pcfSG" {
     tags {
         Name = "${var.prefix}-PCF VMs Security Group"
     }
-    ingress {
-        from_port = 0
-        to_port = 0
-        protocol = "-1"
-        cidr_blocks = ["${var.vpc_cidr}"]
-    }
+}
 
-    egress {
-        from_port = 0
-        to_port = 0
-        protocol = -1
-        cidr_blocks = ["${var.vpc_cidr}"]
-    }
+resource "aws_security_group_rule" "pcfSG_ingress" {
+  type            = "ingress"
+  from_port = 0
+  to_port = 0
+  protocol = "-1"
+  cidr_blocks = ["${var.vpc_cidr}"]
+
+  security_group_id = "${aws_security_group.pcfSG.id}"
+}
+
+resource "aws_security_group_rule" "pcfSG_ingress_PcfHttpElbSg" {
+  type            = "ingress"
+  from_port       = 0
+  to_port         = 0
+  protocol        = "-1"
+  source_security_group_id = "${aws_security_group.PcfHttpElbSg.source_security_group_id}"
+  security_group_id = "${aws_security_group.pcfSG.id}"
+}
+
+resource "aws_security_group_rule" "pcfSG_ingress_PcfSshElbSg" {
+  type            = "ingress"
+  from_port       = 0
+  to_port         = 0
+  protocol        = "-1"
+  source_security_group_id = "${aws_security_group.PcfSshElbSg.source_security_group_id}"
+  security_group_id = "${aws_security_group.pcfSG.id}"
+}
+
+resource "aws_security_group_rule" "pcfSG_ingress_PcfTcpElbSg" {
+  type            = "ingress"
+  from_port       = 0
+  to_port         = 0
+  protocol        = "-1"
+  source_security_group_id = "${aws_security_group.PcfTcpElbSg.source_security_group_id}"
+  security_group_id = "${aws_security_group.pcfSG.id}"
+}
+
+resource "aws_security_group_rule" "pcfSG_ingress_PcfHttpElbSg" {
+  type            = "egress"
+  from_port       = 443
+  to_port         = 443
+  protocol        = "tcp"
+  source_security_group_id = "${aws_security_group.PcfHttpElbSg.source_security_group_id}"
+  security_group_id = "${aws_security_group.pcfSG.id}"
+}
+
+resource "aws_security_group_rule" "pcfSG_ingress_PcfHttpElbSg" {
+  type            = "egress"
+  from_port       = 4443
+  to_port         = 4443
+  protocol        = "tcp"
+  source_security_group_id = "${aws_security_group.PcfHttpElbSg.source_security_group_id}"
+  security_group_id = "${aws_security_group.pcfSG.id}"
 }
 
 resource "aws_security_group" "cloud_controller" {
