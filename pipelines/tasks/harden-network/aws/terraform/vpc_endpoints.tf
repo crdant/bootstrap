@@ -19,28 +19,4 @@ resource "aws_vpc_endpoint" "s3" {
     "${aws_security_group.directorSG.id}"
   ]
 
-  policy = <<POLICY
-{
-"Statement": [
-  {
-    "Sid": "Access-to-blobstore-buckets-only",
-    "Principal": "*",
-    "Action": [
-      "s3:::*"
-    ],
-    "Effect": "Allow",
-    "Resource": [ "arn:aws:s3:::${aws_s3_bucket.bosh.bucket},
-                  "arn:aws:s3:::${aws_s3_bucket.bosh.bucket}/*",
-                  "arn:aws:s3:::${aws_s3_bucket.buildpacks.bucket},
-                  "arn:aws:s3:::${aws_s3_bucket.buildpacks.bucket}/*",
-                  "arn:aws:s3:::${aws_s3_bucket.droplets.bucket},
-                  "arn:aws:s3:::${aws_s3_bucket.droplets.bucket}/*",
-                  "arn:aws:s3:::${aws_s3_bucket.packages.bucket},
-                  "arn:aws:s3:::${aws_s3_bucket.packages.bucket}/*",
-                  "arn:aws:s3:::${aws_s3_bucket.resources.bucket},
-                  "arn:aws:s3:::${aws_s3_bucket.resources.bucket}/*" ]
-  }
-]
-}
-POLICY
 }
