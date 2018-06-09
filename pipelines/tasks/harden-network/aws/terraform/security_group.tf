@@ -23,12 +23,22 @@ resource "aws_security_group_rule" "allow_directorsg_ingress_default" {
     security_group_id = "${aws_security_group.directorSG.id}"
 }
 
-resource "aws_security_group_rule" "director_egress_for_aws" {
+resource "aws_security_group_rule" "director_egress_for_s3" {
   type            = "egress"
   protocol        = "tcp"
   from_port       = "443"
   to_port         = "443"
-  prefix_list_ids = [ "${aws_vpc_endpoint.ec2.prefix_list_id}", "${aws_vpc_endpoint.s3.prefix_list_id}" ]
+  prefix_list_ids = [ "${aws_vpc_endpoint.s3.prefix_list_id}" ]
+
+  security_group_id = "${aws_security_group.directorSG.id}"
+}
+
+resource "aws_security_group_rule" "director_egress_for_ec2" {
+  type            = "egress"
+  protocol        = "tcp"
+  from_port       = "443"
+  to_port         = "443"
+  prefix_list_ids = [ "${aws_vpc_endpoint.s3.prefix_list_id}" ]
 
   security_group_id = "${aws_security_group.directorSG.id}"
 }
@@ -133,12 +143,12 @@ resource "aws_security_group" "cloud_controller" {
   }
 }
 
-resource "aws_security_group_rule" "cloud_controller_egress_for_aws" {
+resource "aws_security_group_rule" "cloud_controller_egress_for_s3" {
   type            = "egress"
   protocol        = "tcp"
   from_port       = "443"
   to_port         = "443"
-  prefix_list_ids = [ "${aws_vpc_endpoint.ec2.prefix_list_id}", "${aws_vpc_endpoint.s3.prefix_list_id}" ]
+  prefix_list_ids = [ "${aws_vpc_endpoint.s3.prefix_list_id}" ]
 
   security_group_id = "${aws_security_group.cloud_controller.id}"
 }
