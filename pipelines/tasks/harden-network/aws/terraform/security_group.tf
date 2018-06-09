@@ -132,7 +132,7 @@ resource "aws_security_group_rule" "pcfSG_ingress_PcfHttpElbSg" {
   from_port       = 0
   to_port         = 0
   protocol        = "-1"
-  source_security_group_id = "${aws_elb.PcfHttpElbSg.source_security_group_id}"
+  source_security_group_id = "${aws_elb.PcfHttpElb.source_security_group_id}"
   security_group_id = "${aws_security_group.pcfSG.id}"
 }
 
@@ -141,7 +141,7 @@ resource "aws_security_group_rule" "pcfSG_ingress_PcfSshElbSg" {
   from_port       = 0
   to_port         = 0
   protocol        = "-1"
-  source_security_group_id = "${aws_elb.PcfSshElbSg.source_security_group_id}"
+  source_security_group_id = "${aws_elb.PcfSshElb.source_security_group_id}"
   security_group_id = "${aws_security_group.pcfSG.id}"
 }
 
@@ -150,7 +150,7 @@ resource "aws_security_group_rule" "pcfSG_ingress_PcfTcpElbSg" {
   from_port       = 0
   to_port         = 0
   protocol        = "-1"
-  source_security_group_id = "${aws_elb.PcfTcpElbSg.source_security_group_id}"
+  source_security_group_id = "${aws_elb.PcfTcpElb.source_security_group_id}"
   security_group_id = "${aws_security_group.pcfSG.id}"
 }
 
@@ -159,7 +159,7 @@ resource "aws_security_group_rule" "pcfSG_egress_PcfHttpElbSg_443" {
   from_port       = 443
   to_port         = 443
   protocol        = "tcp"
-  source_security_group_id = "${aws_elb.PcfHttpElbSg.source_security_group_id}"
+  source_security_group_id = "${aws_elb.PcfHttpElb.source_security_group_id}"
   security_group_id = "${aws_security_group.pcfSG.id}"
 }
 
@@ -168,7 +168,7 @@ resource "aws_security_group_rule" "pcfSG_egress_PcfHttpElbSg_4443" {
   from_port       = 4443
   to_port         = 4443
   protocol        = "tcp"
-  source_security_group_id = "${aws_elb.PcfHttpElbSg.source_security_group_id}"
+  source_security_group_id = "${aws_elb.PcfHttpElb.source_security_group_id}"
   security_group_id = "${aws_security_group.pcfSG.id}"
 }
 
