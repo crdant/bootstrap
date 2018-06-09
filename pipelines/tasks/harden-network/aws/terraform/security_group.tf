@@ -33,15 +33,16 @@ resource "aws_security_group_rule" "director_egress_for_s3" {
   security_group_id = "${aws_security_group.directorSG.id}"
 }
 
+/*
 resource "aws_security_group_rule" "director_egress_for_ec2" {
   type            = "egress"
   protocol        = "tcp"
   from_port       = "443"
   to_port         = "443"
-  prefix_list_ids = [ "${aws_vpc_endpoint.s3.prefix_list_id}" ]
 
   security_group_id = "${aws_security_group.directorSG.id}"
 }
+*/
 
 resource "aws_security_group_rule" "director_egress_for_cloudfront" {
   type        = "egress"
