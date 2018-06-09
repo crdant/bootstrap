@@ -127,20 +127,47 @@ resource "aws_security_group_rule" "pcfSG_ingress" {
   security_group_id = "${aws_security_group.pcfSG.id}"
 }
 
-resource "aws_security_group_rule" "pcfSG_ingress_PcfHttpElbSg" {
+resource "aws_security_group_rule" "pcfSG_ingress_PcfHttpElbSg_80" {
   type            = "ingress"
-  from_port       = 0
-  to_port         = 0
-  protocol        = "-1"
+  from_port       = 80
+  to_port         = 80
+  protocol        = "tcp"
   source_security_group_id = "${aws_elb.PcfHttpElb.source_security_group_id}"
   security_group_id = "${aws_security_group.pcfSG.id}"
 }
 
-resource "aws_security_group_rule" "pcfSG_ingress_PcfSshElbSg" {
+resource "aws_security_group_rule" "pcfSG_ingress_PcfHttpElbSg_443" {
   type            = "ingress"
-  from_port       = 0
-  to_port         = 0
-  protocol        = "-1"
+  from_port       = 443
+  to_port         = 443
+  protocol        = "tcp"
+  source_security_group_id = "${aws_elb.PcfHttpElb.source_security_group_id}"
+  security_group_id = "${aws_security_group.pcfSG.id}"
+}
+
+resource "aws_security_group_rule" "pcfSG_ingress_PcfHttpElbSg_4443" {
+  type            = "ingress"
+  from_port       = 4443
+  to_port         = 4443
+  protocol        = "tcp"
+  source_security_group_id = "${aws_elb.PcfHttpElb.source_security_group_id}"
+  security_group_id = "${aws_security_group.pcfSG.id}"
+}
+
+resource "aws_security_group_rule" "pcfSG_ingress_PcfSshElbSg_22" {
+  type            = "ingress"
+  from_port       = 22
+  to_port         = 22
+  protocol        = "tcp"
+  source_security_group_id = "${aws_elb.PcfSshElb.source_security_group_id}"
+  security_group_id = "${aws_security_group.pcfSG.id}"
+}
+
+resource "aws_security_group_rule" "pcfSG_ingress_PcfSshElbSg_2222" {
+  type            = "ingress"
+  from_port       = 2222
+  to_port         = 2222
+  protocol        = "tcp"
   source_security_group_id = "${aws_elb.PcfSshElb.source_security_group_id}"
   security_group_id = "${aws_security_group.pcfSG.id}"
 }
