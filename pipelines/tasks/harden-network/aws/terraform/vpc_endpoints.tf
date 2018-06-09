@@ -13,10 +13,9 @@ resource "aws_vpc_endpoint" "s3" {
   vpc_id             = "${aws_vpc.PcfVpc.id}"
   service_name       = "com.amazonaws.${var.aws_region}.s3"
   vpc_endpoint_type  = "Gateway"
-
-  security_group_ids = [
-    "${aws_security_group.cloud_controller.id}",
-    "${aws_security_group.directorSG.id}"
-  ]
-
+  route_table_ids    = [
+      "${aws_route_table.PrivateSubnetRouteTable_az1}",
+      "${aws_route_table.SubnetRouteTable_az2}",
+      "${aws_route_table.SubnetRouteTable_az3}"
+    ]
 }
