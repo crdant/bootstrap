@@ -154,7 +154,7 @@ resource "aws_security_group_rule" "pcfSG_ingress_PcfTcpElbSg" {
   security_group_id = "${aws_security_group.pcfSG.id}"
 }
 
-resource "aws_security_group_rule" "pcfSG_ingress_PcfHttpElbSg" {
+resource "aws_security_group_rule" "pcfSG_egress_PcfHttpElbSg_443" {
   type            = "egress"
   from_port       = 443
   to_port         = 443
@@ -163,7 +163,7 @@ resource "aws_security_group_rule" "pcfSG_ingress_PcfHttpElbSg" {
   security_group_id = "${aws_security_group.pcfSG.id}"
 }
 
-resource "aws_security_group_rule" "pcfSG_ingress_PcfHttpElbSg" {
+resource "aws_security_group_rule" "pcfSG_egress_PcfHttpElbSg_4443" {
   type            = "egress"
   from_port       = 4443
   to_port         = 4443
