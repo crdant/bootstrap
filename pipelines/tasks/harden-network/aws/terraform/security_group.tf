@@ -117,7 +117,15 @@ resource "aws_security_group" "pcfSG" {
     }
 }
 
+resource "aws_security_group_rule" "pcfSG_ingress" {
+  type            = "ingress"
+  from_port = 0
+  to_port = 0
+  protocol = "-1"
+  cidr_blocks = ["${var.vpc_cidr}"]
 
+  security_group_id = "${aws_security_group.pcfSG.id}"
+}
 
 resource "aws_security_group_rule" "pcfSG_ingress_PcfHttpElbSg_80" {
   type            = "ingress"
