@@ -1,4 +1,4 @@
-resource "aws_vpc_endpoint" "ec2" {
+resource "aws_vpc_endpoint" "ec2_infra" {
   vpc_id            = "${aws_vpc.PcfVpc.id}"
   service_name      = "com.amazonaws.${var.aws_region}.ec2"
   vpc_endpoint_type = "Interface"
@@ -10,6 +10,23 @@ resource "aws_vpc_endpoint" "ec2" {
 
   subnet_ids = [
     "${aws_subnet.PcfVpcInfraSubnet_az1.id}"
+  ]
+
+  private_dns_enabled = true
+}
+
+resource "aws_vpc_endpoint" "ec2_opsman" {
+  vpc_id            = "${aws_vpc.PcfVpc.id}"
+  service_name      = "com.amazonaws.${var.aws_region}.ec2"
+  vpc_endpoint_type = "Interface"
+
+  security_group_ids = [
+    "${aws_security_group.cloud_controller.id}",
+    "${aws_security_group.directorSG.id}"
+  ]
+
+  subnet_ids = [
+    "${aws_subnet.PcfVpcPublicSubnet_az1.id}"
   ]
 
   private_dns_enabled = true
