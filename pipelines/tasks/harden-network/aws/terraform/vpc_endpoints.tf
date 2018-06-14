@@ -7,6 +7,8 @@ resource "aws_vpc_endpoint" "ec2" {
     "${aws_security_group.cloud_controller.id}",
     "${aws_security_group.directorSG.id}"
   ]
+
+  private_dns_enabled = true
 }
 
 resource "aws_vpc_endpoint" "s3" {
