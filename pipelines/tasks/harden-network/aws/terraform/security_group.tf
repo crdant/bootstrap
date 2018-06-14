@@ -32,6 +32,24 @@ resource "aws_security_group_rule" "director_egress_default" {
   security_group_id = "${aws_security_group.directorSG.id}"
 }
 
+resource "aws_security_group_rule" "director_egress_dns" {
+  type            = "egress"
+  protocol        = "udp"
+  from_port       = "53"
+  to_port         = "53"
+  cidr_blocks     = ["${var.vpc_cidr}"]
+  security_group_id = "${aws_security_group.directorSG.id}"
+}
+
+resource "aws_security_group_rule" "director_egress_dns" {
+  type            = "egress"
+  protocol        = "udp"
+  from_port       = "123"
+  to_port         = "123"
+  cidr_blocks     = ["${var.vpc_cidr}"]
+  security_group_id = "${aws_security_group.directorSG.id}"
+}
+
 resource "aws_security_group_rule" "director_egress_for_s3" {
   type            = "egress"
   protocol        = "tcp"
