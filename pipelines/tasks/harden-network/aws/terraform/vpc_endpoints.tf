@@ -21,7 +21,7 @@ resource "aws_vpc_endpoint" "ec2" {
     "${aws_subnet.PcfVpcPublicSubnet_az3.id}",
     "${aws_subnet.PcfVpcServicesSubnet_az1.id}",
     "${aws_subnet.PcfVpcServicesSubnet_az2.id}",
-    "${aws_subnet.PcfVpcServicesSubnet_az3}"
+    "${aws_subnet.PcfVpcServicesSubnet_az3.id}"
   ]
 
   private_dns_enabled = true
