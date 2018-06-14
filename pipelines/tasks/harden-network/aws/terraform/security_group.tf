@@ -37,6 +37,7 @@ resource "aws_security_group_rule" "director_egress_dns" {
   protocol        = "udp"
   from_port       = "53"
   to_port         = "53"
+  cidr_blocks     = ["0.0.0.0/0"]
   security_group_id = "${aws_security_group.directorSG.id}"
 }
 
@@ -45,6 +46,7 @@ resource "aws_security_group_rule" "director_egress_ntp" {
   protocol        = "udp"
   from_port       = "123"
   to_port         = "123"
+  cidr_blocks     = ["0.0.0.0/0"]
   security_group_id = "${aws_security_group.directorSG.id}"
 }
 
