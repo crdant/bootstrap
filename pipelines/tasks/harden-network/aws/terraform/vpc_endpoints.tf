@@ -4,7 +4,6 @@ resource "aws_vpc_endpoint" "ec2" {
   vpc_endpoint_type = "Interface"
 
   security_group_ids = [
-    "${aws_security_group.cloud_controller.id}",
     "${aws_security_group.directorSG.id}"
   ]
 
