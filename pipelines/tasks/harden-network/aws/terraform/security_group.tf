@@ -41,7 +41,7 @@ resource "aws_security_group_rule" "director_egress_dns" {
   security_group_id = "${aws_security_group.directorSG.id}"
 }
 
-resource "aws_security_group_rule" "director_egress_dns" {
+resource "aws_security_group_rule" "director_egress_ntp" {
   type            = "egress"
   protocol        = "udp"
   from_port       = "123"
