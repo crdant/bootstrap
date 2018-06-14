@@ -23,6 +23,15 @@ resource "aws_security_group_rule" "allow_directorsg_ingress_default" {
     security_group_id = "${aws_security_group.directorSG.id}"
 }
 
+resource "aws_security_group_rule" "director_egress_default" {
+  type            = "egress"
+  protocol        = "-1"
+  from_port       = "0"
+  to_port         = "0"
+  cidr_blocks     = ["${var.vpc_cidr}"]
+  security_group_id = "${aws_security_group.directorSG.id}"
+}
+
 resource "aws_security_group_rule" "director_egress_for_s3" {
   type            = "egress"
   protocol        = "tcp"
