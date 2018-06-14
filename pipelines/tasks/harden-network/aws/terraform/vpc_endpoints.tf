@@ -9,19 +9,19 @@ resource "aws_vpc_endpoint" "ec2" {
   ]
 
   subnet_ids = [
-    "${aws_subnet.PcfVpcDynamicServicesSubnet_az1}",
-    "${aws_subnet.PcfVpcDynamicServicesSubnet_az2",
-    "${aws_subnet.PcfVpcDynamicServicesSubnet_az3",
-    "${aws_subnet.PcfVpcErtSubnet_az1",
-    "${aws_subnet.PcfVpcErtSubnet_az2",
-    "${aws_subnet.PcfVpcErtSubnet_az3",
-    "${aws_subnet.PcfVpcInfraSubnet_az1",
-    "${aws_subnet.PcfVpcPublicSubnet_az1",
-    "${aws_subnet.PcfVpcPublicSubnet_az2",
-    "${aws_subnet.PcfVpcPublicSubnet_az3",
-    "${aws_subnet.PcfVpcServicesSubnet_az1",
-    "${aws_subnet.PcfVpcServicesSubnet_az2",
-    "${aws_subnet.PcfVpcServicesSubnet_az3"
+    "${aws_subnet.PcfVpcDynamicServicesSubnet_az1.id}",
+    "${aws_subnet.PcfVpcDynamicServicesSubnet_az2.id}",
+    "${aws_subnet.PcfVpcDynamicServicesSubnet_az3.id}",
+    "${aws_subnet.PcfVpcErtSubnet_az1.id}",
+    "${aws_subnet.PcfVpcErtSubnet_az2.id}",
+    "${aws_subnet.PcfVpcErtSubnet_az3.id}",
+    "${aws_subnet.PcfVpcInfraSubnet_az1.id}",
+    "${aws_subnet.PcfVpcPublicSubnet_az1.id}",
+    "${aws_subnet.PcfVpcPublicSubnet_az2.id}",
+    "${aws_subnet.PcfVpcPublicSubnet_az3.id}",
+    "${aws_subnet.PcfVpcServicesSubnet_az1.id}",
+    "${aws_subnet.PcfVpcServicesSubnet_az2.id}",
+    "${aws_subnet.PcfVpcServicesSubnet_az3}"
   ]
 
   private_dns_enabled = true
