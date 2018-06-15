@@ -52,9 +52,9 @@ resource "aws_security_group_rule" "director_egress_ntp" {
 
 resource "aws_security_group_rule" "director_egress_for_s3" {
   type            = "egress"
-  protocol        = "tcp"
-  from_port       = "443"
-  to_port         = "443"
+  protocol        = "-1"
+  from_port       = "0"
+  to_port         = "0"
   prefix_list_ids = [ "${aws_vpc_endpoint.s3.prefix_list_id}" ]
 
   security_group_id = "${aws_security_group.directorSG.id}"
