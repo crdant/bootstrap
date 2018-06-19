@@ -186,11 +186,21 @@ resource "aws_security_group" "cloud_controller" {
   }
 }
 
-resource "aws_security_group_rule" "cloud_controller_egress_for_s3" {
+resource "aws_security_group_rule" "cloud_controller_egress_for_s3_tls" {
   type            = "egress"
   protocol        = "tcp"
   from_port       = "443"
   to_port         = "443"
+  prefix_list_ids = [ "${aws_vpc_endpoint.s3.prefix_list_id}" ]
+
+  security_group_id = "${aws_security_group.cloud_controller.id}"
+}
+
+resource "aws_security_group_rule" "cloud_controller_egress_for_s3" {
+  type            = "egress"
+  protocol        = "tcp"
+  from_port       = "80"
+  to_port         = "80"
   prefix_list_ids = [ "${aws_vpc_endpoint.s3.prefix_list_id}" ]
 
   security_group_id = "${aws_security_group.cloud_controller.id}"
