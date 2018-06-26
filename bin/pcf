@@ -44,8 +44,8 @@ pcf_key_file=${key_dir}/${project}-${pcf_service_account_name}.json
 pcf_dns_zone="pcf-${short_id}-zone"         # TO DO: See if I can get this from the Terraform state (or even the pipelines terraform file)
 
 pcf_subdomain="pcf.${subdomain}"
-pcf_system_domain="system.${pcf_subdomain}"
-pcf_apps_domain="apps.${pcf_subdomain}"
+pcf_system_domain="sys.${pcf_subdomain}"
+pcf_apps_domain="cfapps.${pcf_subdomain}"
 opsman_host="opsman.${pcf_subdomain}"
 
 mysql_backup_bucket=${short_id}-mysql-backups
@@ -248,6 +248,7 @@ pipelines() {
 install_params () {
   # terraform_statefile_bucket="${env_id}-bucket"
   cat <<PARAMS > ${pcf_install_parameter_file}
+iaas: ${iaas}
 ERT_DOMAIN: ${pcf_subdomain} # This is the domain you will access ERT with, for example: pcf.example.com.
 system_domain: ${pcf_system_domain} # e.g. system.pcf.example.com
 apps_domain: ${pcf_apps_domain} # e.g. apps.pcf.example.com
@@ -271,23 +272,21 @@ install_pipeline () {
 
 opsman_params () {
   cat <<PARAMS > ${om_upgrade_parameter_file}
-  # Existing Ops Manager VM name pattern. This should uniquely filter to a running Ops Manager instance.
+# Existing Ops Manager VM name pattern. This should uniquely filter to a running Ops Manager instance.
 # eg.  myenv-OpsMan
-existing_opsman_vm_name: CHANGEME
+existing_opsman_vm_name: ${short_env_id}-OpsMan
+
 # Ops Manager Admin Credentials - set during the installation of Ops Manager
 # Either opsman_client_id/opsman_client_secret or opsman_admin_username/opsman_admin_password needs to be specified
 # If you are using opsman_admin_username/opsman_admin_password, edit opsman_client_id/opsman_client_secret to be an empty value.
 # If you are using opsman_client_id/opsman_client_secret, edit opsman_admin_username/opsman_admin_password to be an empty value.
-opsman_client_id:
-opsman_client_secret:
+opsman_client_id: ""
+opsman_client_secret: ""
 
 # If install pipeline has been used then the passphrase is same as the admin password
+opsman_passphrase: ((opsman_admin_password))
 opsman_domain_or_ip_address: ${opsman_host} #This must be your pcf_ert_domain with "opsman." as a prefix. For example, opsman.pcf.example.com
-
-# Ops Manager Url - FQDN to access Ops Manager without protocol (will use https), ex: opsmgr.example.com
-opsman_domain_or_ip_address: CHANGEME
-
-opsman_major_minor_version: ^2\.0\.[0-9]+$ # Ops Manager minor version to track (e.g ^2\.0\.[0-9]+$ will track 2.0.x versions)
+opsman_major_minor_version: ^2\.1\.[0-9]+$ # Ops Manager minor version to track (e.g ^2\.0\.[0-9]+$ will track 2.0.x versions)
 
 # Pivotal Net Token to download Ops Manager binaries from https://network.pivotal.io
 pivnet_token: ${pivnet_token} # value must be a Pivotal Network legacy token; UAA API tokens do not work currently work
@@ -299,10 +298,10 @@ PARAMS
 
 opsman_pipeline () {
   concourse_login
-  upgrade_params
+  opsman_params
   fly --target ${concourse_target} set-pipeline --pipeline ${om_upgrade_pipeline} \
-  --config ${om_upgrade_pipeline_file} --load-vars-from ${params_dir}/upgrade-ops-manager/${iaas}/params.yml \
-  --load-vars-from ${pcf_upgrade_parameter_file}
+    --config ${om_upgrade_pipeline_file} --load-vars-from ${params_dir}/upgrade-ops-manager/${iaas}/params.yml \
+    --load-vars-from ${om_upgrade_parameter_file}
 }
 
 upgrade_params () {

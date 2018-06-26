@@ -33,6 +33,6 @@ opsman_iaas_params () {
 aws_access_key_id: ${pcf_secret_access_key_id}
 aws_secret_access_key: ${pcf_secret_access_key}
 aws_region: ${region}
-aws_vpc_id: ${vpc}
+aws_vpc_id: vpc-1999b260
 PARAMS
 }
