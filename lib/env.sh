@@ -46,7 +46,9 @@ if [ -f "${workdir}/bbl-env.sh" ] ; then
 fi
 
 if [ -f "${bbl_terraform_vars_file}" ] ; then
-  bbl_vars="$(sed -e 's/:[^:\/\/]/="/;' ${bbl_terraform_vars_file} | grep "^short_env_id")"
-  eval "${bbl_vars}"
+  bbl_vars="$(sed -e 's/:[^:\/\/]/="/;' ${bbl_terraform_vars_file} | ( grep "^short_env_id" || true) )"
+  if [ -n "${bbl_vars}" ] ; then
+    eval "${bbl_vars}"
+  fi
   short_id=${short_env_id}
 fi
