@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 BASEDIR=$(dirname $(dirname $0))
 . "${BASEDIR}/lib/env.sh"
+
+# allow for iaas customizations
+if [ -f ${lib_dir}/${iaas}/prepare.sh ] ; then
+  . ${lib_dir}/${iaas}/prepare.sh
+fi
+
 set -e
 
 if [ ! -d ${workdir} ] ; then
@@ -21,6 +27,10 @@ trust() {
 }
 
 plan() {
+  if [ -n "$(type -t pre_plan)" ] ; then
+    pre_plan
+  fi
+
   # N.B: This will create concourse load balancers before we need them. Annoys me but it's painful
   #      to do it later. See about a PR to the team for it.
   bbl plan --state-dir ${state_dir} --lb-type concourse
@@ -32,8 +42,8 @@ patch() {
   cat <<TFVARS > ${state_dir}/vars/${job}.tfvars
 bootstrap_domain="${subdomain}"
 bootstrap_domain_token="${subdomain}"
-short_id="${short_id}"
 dns_ttl="${dns_ttl}"
+key_dir="${key_dir}"
 TFVARS
 }
 
@@ -41,6 +51,10 @@ director() {
   echo "Creating the $env_id BOSH director..."
   bbl up --state-dir ${state_dir} --debug
   env_id=$(bbl env-id --state-dir ${state_dir})
+
+  if [ -n "$(type -t pre_plan)" ] ; then
+    post_director
+  fi
 }
 
 client() {

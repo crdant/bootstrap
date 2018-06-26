@@ -1,3 +1,9 @@
-BBL_IAAS=${iaas}
-BBL_GCP_SERVICE_ACCOUNT_KEY=${key_file}
-BBL_GCP_REGION=${region}
+export BBL_IAAS=${iaas}
+
+if [ -f "${plan_key_file}" ] ; then
+  export BBL_GCP_SERVICE_ACCOUNT_KEY=$(cat ${plan_key_file})
+elif [ -f "${key_file}" ] ; then
+  export BBL_GCP_SERVICE_ACCOUNT_KEY=$(cat ${key_file})
+fi
+
+export BBL_GCP_REGION=${region}
