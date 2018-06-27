@@ -38,15 +38,18 @@ buildpack_upgrade_parameter_file="${workdir}/${env_id}-${buildpack_upgrade_pipel
 
 ops_dir=${BASEDIR}/pipelines/ops
 
-pcf_service_account_name="pcf-${short_id}"
+pcf_service_account_name="${short_id}-pcf"
 pcf_service_account="${pcf_service_account_name}@${project}.iam.gserviceaccount.com"
-pcf_key_file=${key_dir}/${project}-${pcf_service_account_name}.json
+pcf_key_file=${key_dir}/${pcf_service_account}.json
 pcf_dns_zone="pcf-${short_id}-zone"         # TO DO: See if I can get this from the Terraform state (or even the pipelines terraform file)
 
 pcf_subdomain="pcf.${subdomain}"
-pcf_system_domain="sys.${pcf_subdomain}"
-pcf_apps_domain="cfapps.${pcf_subdomain}"
-opsman_host="opsman.${pcf_subdomain}"
+pcf_system_subdomain="system"
+pcf_system_domain="${pcf_system_subdomain}.${pcf_subdomain}"
+pcf_apps_subdomain="apps"
+pcf_apps_domain="${pcf_apps_subdomain}.${pcf_subdomain}"
+opsman_host="manager"
+opsman_fqdn="${opsman_host}.${pcf_subdomain}"
 
 mysql_backup_bucket=${short_id}-mysql-backups
 mysql_backup_schedule="0 0/72 * * *"
@@ -62,15 +65,12 @@ patch() {
   cat <<TFVARS > ${state_dir}/vars/${job}.tfvars
 key_dir="${key_dir}"
 pcf_subdomain="${pcf_subdomain}"
-pcf_wildcard_cert=<<CERT
-$(cat ${ca_dir}/${pcf_subdomain}/cert.pem)
-CERT
-pcf_wildcard_key=<<KEY
-$(cat ${ca_dir}/${pcf_subdomain}/privkey.pem)
-KEY
-pcf_wildcard_chain=<<CHAIN
-$(cat ${ca_dir}/${pcf_subdomain}/chain.pem)
-CHAIN
+pcf_system_subdomain="${pcf_system_subdomain}"
+pcf_apps_subdomain="${pcf_apps_subdomain}"
+opsman_host="${opsman_host}"
+pcf_wildcard_cert="${key_dir}/${pcf_subdomain}/cert.pem"
+pcf_wildcard_key="${key_dir}/${pcf_subdomain}/privkey.pem"
+pcf_wildcard_chain="${key_dir}/${pcf_subdomain}/chain.pem"
 TFVARS
 }
 
@@ -168,16 +168,6 @@ get_credential () {
   echo $credential
 }
 
-ssl_certificates () {
-  echo "Creating SSL certificate for ERT..."
-  create_certificate "${pcf_subdomain}" \
-    --domain "${pcf_subdomain}" --domain "*.${pcf_apps_domain}" --domain "*.login.${pcf_system_domain}" \
-    --domain "*.uaa.${pcf_system_domain}" --domain "*.${pcf_system_domain}"
-
-  # needed because AWS load balancers require the certificate to be imported into AWS ACM before they are assigned
-  echo "SSL certificate for ERT created and stored at ${ca_dir}/${pcf_subdomain}/cert.pem, private key stored at ${ca_dir}/${pcf_subdomain}/privkey.pem."
-}
-
 secrets () {
   safe_auth
 
@@ -190,9 +180,11 @@ secrets () {
   safe gen ${team_secret_root}/opsman_admin_password value
 
   # store the certificates we generated
-  safe set ${deploy_secret_root}/pcf_ert_ssl_cert value="$(cat ${ca_dir}//${pcf_subdomain}/cert.pem)"
-  safe set ${deploy_secret_root}/pcf_ert_ssl_key value="$(cat ${ca_dir}//${pcf_subdomain}/privkey.pem)"
-
+  safe set ${deploy_secret_root}/poe_ssl_name1 value="${env_id}-default-cert"
+  safe set ${deploy_secret_root}/poe_ssl_cert1 value="$(cat "${key_dir}/${pcf_subdomain}/cert.pem")"
+  safe set ${deploy_secret_root}/poe_ssl_key1 value="$(cat "${key_dir}/${pcf_subdomain}/privkey.pem")"
+  safe set ${deploy_secret_root}/opsman_trusted_certs value=""
+  
   # credhub
   primary_key_name="${env_id}-credhub-key-1"
 
@@ -216,7 +208,7 @@ secrets () {
   safe gen ${deploy_secret_root}/db_autoscale_password value
   safe set ${deploy_secret_root}/db_uaa_username value=uaa
   safe gen ${deploy_secret_root}/db_uaa_password value
-  safe set ${deploy_secret_root}/db_app_usage_service_username value=pcf_app_ usage
+  safe set ${deploy_secret_root}/db_app_usage_service_username value=pcf_app_usage
   safe gen ${deploy_secret_root}/db_app_usage_service_password value
   safe set ${deploy_secret_root}/db_ccdb_username value=pcf_ccdb
   safe gen ${deploy_secret_root}/db_ccdb_password value
@@ -250,13 +242,15 @@ install_params () {
   cat <<PARAMS > ${pcf_install_parameter_file}
 iaas: ${iaas}
 ERT_DOMAIN: ${pcf_subdomain} # This is the domain you will access ERT with, for example: pcf.example.com.
+pcf_ert_domain: ${pcf_subdomain} # This is the domain you will access ERT with, for example: pcf.example.com.
 system_domain: ${pcf_system_domain} # e.g. system.pcf.example.com
 apps_domain: ${pcf_apps_domain} # e.g. apps.pcf.example.com
 ert_major_minor_version: ${pas_version_regex} # ERT minor version to track (e.g ^2\.0\.[0-9]+$ will track 2.0.x versions)
 mysql_monitor_recipient_email: ${email}
-opsman_domain_or_ip_address: ${opsman_host} #This must be your pcf_ert_domain with "opsman." as a prefix. For example, opsman.pcf.example.com
+opsman_domain_or_ip_address: ${opsman_fqdn} #This must be your pcf_ert_domain with "opsman." as a prefix. For example, opsman.pcf.example.com
 opsman_major_minor_version: ${om_version_regex} # Ops Manager minor version to track (e.g ^2\.0\.[0-9]+$ will track 2.0.x versions)
 terraform_prefix: ${short_id}
+routing_tls_termination: load_balancer
 PARAMS
   install_iaas_params
 }
@@ -264,8 +258,7 @@ PARAMS
 install_pipeline () {
   concourse_login
   fly --target ${concourse_target} set-pipeline --pipeline ${pcf_install_pipeline} \
-    --config ${pcf_install_pipeline_file} --load-vars-from ${params_dir}/install-pcf/${iaas}/params.yml \
-    --load-vars-from ${pcf_install_parameter_file}
+    --config ${pcf_install_pipeline_file} --load-vars-from ${pcf_install_parameter_file}
   fly --target ${concourse_target} unpause-pipeline --pipeline ${pcf_install_pipeline}
 }
 
@@ -285,7 +278,7 @@ opsman_client_secret: ""
 
 # If install pipeline has been used then the passphrase is same as the admin password
 opsman_passphrase: ((opsman_admin_password))
-opsman_domain_or_ip_address: ${opsman_host} #This must be your pcf_ert_domain with "opsman." as a prefix. For example, opsman.pcf.example.com
+opsman_domain_or_ip_address: ${opsman_fqdn} #This must be your pcf_ert_domain with "opsman." as a prefix. For example, opsman.pcf.example.com
 opsman_major_minor_version: ^2\.1\.[0-9]+$ # Ops Manager minor version to track (e.g ^2\.0\.[0-9]+$ will track 2.0.x versions)
 
 # Pivotal Net Token to download Ops Manager binaries from https://network.pivotal.io
@@ -307,7 +300,7 @@ opsman_pipeline () {
 upgrade_params () {
   cat <<PARAMS > ${pcf_upgrade_parameter_file}
 iaas_type: ${iaas}
-opsman_domain_or_ip_address: ${opsman_host} #This must be your pcf_ert_domain with "opsman." as a prefix. For example, opsman.pcf.example.com
+opsman_domain_or_ip_address: ${opsman_fqdn} #This must be your pcf_ert_domain with "opsman." as a prefix. For example, opsman.pcf.example.com
 product_slug: elastic-runtime
 # The minor product version to track, as a regexp. To track 1.11.x of a product, this would be "^2\.0\.[0-9]+$", as shown below.
 product_version_regex: ${pas_version_regex}
@@ -611,9 +604,6 @@ teardown() {
 if [ $# -gt 0 ]; then
   while [ $# -gt 0 ]; do
     case $1 in
-      certificates | certs | ssl_certificates)
-        ssl_certificates
-        ;;
       patch )
         patch
         ;;
@@ -735,7 +725,6 @@ if [ $# -gt 0 ]; then
   exit
 fi
 
-ssl_certificates
 patch
 infra
 
