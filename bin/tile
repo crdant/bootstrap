@@ -28,7 +28,7 @@ upload () {
   product_slug=${1}
   release_version=${2}
 
-  om -k --target opsman.${pcf_subdomain} --username ${opsman_username} --password ${opsman_password} \
+  om -k --target ${opsman_host}.${pcf_subdomain} --username ${opsman_username} --password ${opsman_password} \
     upload-product --product ${workdir}/${product_slug}/${release_version}/*
 }
 
@@ -36,7 +36,7 @@ stage () {
   product_slug=${1}
   release_version=${2}
 
-  om -k --target opsman.${pcf_subdomain} --username ${opsman_username} --password ${opsman_password} \
+  om -k --target ${opsman_host}.${pcf_subdomain} --username ${opsman_username} --password ${opsman_password} \
     stage-product --product-name ${product_slug} --product-version ${release_version}
 }
 
@@ -72,7 +72,7 @@ modernize_pipeline() {
 
 show_products () {
   type=${1}
-  om -k --target opsman.${pcf_subdomain} --username ${opsman_username} --password ${opsman_password} ${type}-products
+  om -k --target ${opsman_host}.${pcf_subdomain} --username ${opsman_username} --password ${opsman_password} ${type}-products
 }
 
 if [ $# -gt 0 ]; then
