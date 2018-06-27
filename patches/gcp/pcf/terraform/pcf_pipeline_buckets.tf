@@ -8,6 +8,7 @@ resource "google_storage_bucket_acl" "pipeline_statefile_permissions" {
 
   role_entity = [
     "WRITER:user-${google_service_account.pcf_service_account.email}",
+    "OWNER:user-${google_service_account.bootstrap_service_account.email}"
   ]
 }
 
@@ -21,6 +22,7 @@ resource "google_storage_bucket_acl" "mysql_backup_permissions" {
 
   role_entity = [
     "WRITER:user-${google_service_account.pcf_service_account.email}",
+    "OWNER:user-${google_service_account.bootstrap_service_account.email}"
   ]
 }
 
