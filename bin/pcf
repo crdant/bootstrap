@@ -4,7 +4,6 @@ BASEDIR=$(dirname $(dirname $0))
 . "${BASEDIR}/lib/env.sh"
 . "${BASEDIR}/lib/secrets.sh"
 . "${BASEDIR}/lib/generate_passphrase.sh"
-. "${BASEDIR}/lib/certificates.sh"
 
 # allow for iaas customizations
 if [ -f ${lib_dir}/${iaas}/pcf.sh ] ; then
@@ -184,7 +183,7 @@ secrets () {
   safe set ${deploy_secret_root}/poe_ssl_cert1 value="$(cat "${key_dir}/${pcf_subdomain}/cert.pem")"
   safe set ${deploy_secret_root}/poe_ssl_key1 value="$(cat "${key_dir}/${pcf_subdomain}/privkey.pem")"
   safe set ${deploy_secret_root}/opsman_trusted_certs value=""
-  
+
   # credhub
   primary_key_name="${env_id}-credhub-key-1"
 

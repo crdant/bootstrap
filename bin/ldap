@@ -2,7 +2,6 @@
 BASEDIR=$(dirname $(dirname $0))
 . "${BASEDIR}/lib/env.sh"
 . "${BASEDIR}/lib/generate_passphrase.sh"
-. "${BASEDIR}/lib/certificates.sh"
 
 stemcell_version=3431.13
 
