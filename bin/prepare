@@ -21,6 +21,15 @@ if [ ! -d ${state_dir} ] ; then
   mkdir -p ${state_dir}
 fi
 
+plugins () {
+  local terraform_plugin_dir="${state_dir}/terraform/.terraform/plugins/darwin_amd64"
+  curl -qks -o ${workdir}/terraform-provider-acme_v1.0.0_darwin_amd64.zip https://github.com/vancluever/terraform-provider-acme/releases/download/v1.0.0/terraform-provider-acme_v1.0.0_darwin_amd64.zip
+  if [ ! -d ${terraform_plugin_dir} ] ; then
+    mkdir -p ${terraform_plugin_dir}
+  fi;
+  unzip -d ${terraform_plugin_dir} ${workdir}/terraform-provider-acme_v1.0.0_darwin_amd64.zip
+}
+
 trust() {
   # golang commands don't love Let's Encrypt
   wget -O ${ca_cert_file} https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt
@@ -33,17 +42,19 @@ plan() {
 
   # N.B: This will create concourse load balancers before we need them. Annoys me but it's painful
   #      to do it later. See about a PR to the team for it.
-  bbl plan --state-dir ${state_dir} --lb-type concourse
+  bbl plan --state-dir ${state_dir} --debug --lb-type concourse
 }
 
 patch() {
   local job="bootstrap"
   cp -r ${patch_dir}/${iaas}/${job}/. ${state_dir}
+
   cat <<TFVARS > ${state_dir}/vars/${job}.tfvars
 bootstrap_domain="${subdomain}"
 bootstrap_domain_token="${subdomain}"
 dns_ttl="${dns_ttl}"
 key_dir="${key_dir}"
+email="${email}"
 TFVARS
 }
 
@@ -59,11 +70,7 @@ director() {
 
 client() {
   echo "Configuring BOSH client for the $env_id director..."
-  # can't reuse bbl print-env --state-dir ${state_dir} without redoing the tunnel (with new port), so be aware of that by saving the variable setting
-  bbl_env=$(bbl print-env --state-dir ${state_dir})
-  echo "${bbl_env}" | sed '/ssh/ d' > ${workdir}/bbl-env.sh
-  chmod 755 ${workdir}/bbl-env.sh
-  eval "$bbl_env"
+  eval "$(bbl print-env)"
   # store the ssh key for easy use
   if [ -f ${key_dir}/id_jumpbox_${env_id}.pem ] ; then
     chmod 600 ${key_dir}/id_jumpbox_${env_id}.pem
@@ -85,6 +92,9 @@ login() {
 if [ $# -gt 0 ]; then
   while [ $# -gt 0 ]; do
     case $1 in
+      plugins )
+        plugins
+        ;;
       trust )
         trust
         ;;
@@ -116,10 +126,10 @@ if [ $# -gt 0 ]; then
   exit
 fi
 
+plugins
 trust
 plan
 patch
 director
 client
 login
-trust
