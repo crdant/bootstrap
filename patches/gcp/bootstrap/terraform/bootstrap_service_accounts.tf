@@ -7,12 +7,12 @@ resource "google_service_account_key" "bootstrap_service_account" {
   service_account_id = "${google_service_account.bootstrap_service_account.name}"
 }
 
-resource "google_project_iam_binding" "bootstrap_account_iam" {
-  role        = "roles/editor"
-
-  members = [
-    "serviceAccount:${google_service_account.bootstrap_service_account.email}",
+resource "google_project_iam_member" "bootstrap_service_account" {
+  roles   = [
+    "roles/editor",
+    "roles/iam.serviceAccountAdmin"
   ]
+  member  = "serviceAccount:${google_service_account.bootstrap_service_account.email}"
 }
 
 resource "local_file" "service_account_key" {

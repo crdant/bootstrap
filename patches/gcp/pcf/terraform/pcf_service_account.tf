@@ -7,11 +7,9 @@ resource "google_service_account_key" "pcf_service_account" {
   service_account_id = "${google_service_account.pcf_service_account.name}"
 }
 
-resource "google_project_iam_binding" "pcf_account_iam" {
-  role        = "roles/owner"
-  members = [
-    "serviceAccount:${google_service_account.pcf_service_account.email}",
-  ]
+resource "google_project_iam_member" "pcf_service_account" {
+  role    = "roles/editor"
+  member  = "serviceAccount:${google_service_account.pcf_service_account.email}"
 }
 
 resource "local_file" "pcf_service_account_key" {
