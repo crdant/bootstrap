@@ -52,7 +52,7 @@ instance_groups:
           password: ((postgres_password))
 
       vault:
-        url: https://10.0.31.195:8200
+        url: https://vault.bbl.gcp.crdant.io:8200
         auth:
           backend: token
           client_token: ((atc-vault-token))
