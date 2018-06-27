@@ -131,10 +131,7 @@ modernize_pipeline() {
 if [ $# -gt 0 ]; then
   while [ $# -gt 0 ]; do
     case $1 in
-      certificates )
-        ssl_certificates
-        ;;
-      security )
+      certificates | security )
         ssl_certificates
         ;;
       stemcell )
