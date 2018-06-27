@@ -19,9 +19,9 @@ mount() {
 }
 
 policies () {
-  vault policy-write --address ${vault_addr} --ca-cert=${ca_cert_file} conrad ${etc_dir}/conrad.hcl
-  vault policy-write --address ${vault_addr} --ca-cert=${ca_cert_file} concourse ${etc_dir}/concourse.hcl
-  vault policy-write --address ${vault_addr} --ca-cert=${ca_cert_file} alger ${etc_dir}/alger.hcl
+  vault policy write --address ${vault_addr} --ca-cert=${ca_cert_file} conrad ${etc_dir}/conrad.hcl
+  vault policy write --address ${vault_addr} --ca-cert=${ca_cert_file} concourse ${etc_dir}/concourse.hcl
+  vault policy write --address ${vault_addr} --ca-cert=${ca_cert_file} alger ${etc_dir}/alger.hcl
 }
 
 tokens () {
