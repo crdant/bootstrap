@@ -27,24 +27,6 @@ ca_cert_file=${key_dir}/letsencrypt.pem
 cloud_config_vars_file=${state_dir}/vars/cloud-config-vars.yml
 bbl_terraform_vars_file=${state_dir}/vars/bbl.tfvars
 
-. ${lib_dir}/${iaas}/env.sh
-. ${lib_dir}/${iaas}/bbl_env.sh
-
-if [ -f "${state_dir}/bbl-state.json" ] ; then
-  jumpbox=`bbl jumpbox-address --state-dir ${state_dir} | cut -d':' -f1 `
-  env_id=`bbl env-id --state-dir ${state_dir}`
-  short_id=`bbl env-id --state-dir ${state_dir} | sed s/bbl-env-// | cut -dt -f1`
-else
-  env_id=${subdomain_token}
-fi
-
-dns_zone=`echo ${subdomain} | tr . -`
-dns_ttl=60
-
-if [ -f "${workdir}/bbl-env.sh" ] ; then
-  . ${workdir}/bbl-env.sh
-fi
-
 if [ -f "${cloud_config_vars_file}" ] ; then
   bbl_vars="$(sed -e 's/:[^:\/\/]/="/;' ${cloud_config_vars_file} | sed -e 's/$/"/;' | ( grep "^short_env_id" || true) )"
   if [ -n "${bbl_vars}" ] ; then
@@ -52,3 +34,16 @@ if [ -f "${cloud_config_vars_file}" ] ; then
   fi
   short_id=${short_env_id}
 fi
+
+. ${lib_dir}/${iaas}/env.sh
+. ${lib_dir}/${iaas}/bbl_env.sh
+
+if [ -f "${state_dir}/bbl-state.json" ] ; then
+  jumpbox=`bbl jumpbox-address --state-dir ${state_dir} | cut -d':' -f1 `
+  env_id=`bbl env-id --state-dir ${state_dir}`
+else
+  env_id=${subdomain_token}
+fi
+
+dns_zone=`echo ${subdomain} | tr . -`
+dns_ttl=60
