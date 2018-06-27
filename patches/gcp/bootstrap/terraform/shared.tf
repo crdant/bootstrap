@@ -2,10 +2,6 @@ variable "email" {
   type = "string"
 }
 
-variable "service_account_file" {
-  type = "string"
-}
-
 variable "key_dir" {
   type = "string"
 }
