@@ -6,6 +6,10 @@ variable "service_account_file" {
   type = "string"
 }
 
+variable "key_dir" {
+  type = "string"
+}
+
 locals {
   env_components = "${split("-", var.env_id)}"
   short_env_id = "${join("-", slice(local.env_components, 0, 3))}"

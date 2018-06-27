@@ -1,7 +1,3 @@
-variable "key_dir" {
-  type = "string"
-}
-
 resource "google_service_account" "bootstrap_service_account" {
   account_id   = "${local.short_env_id}"
   display_name = "BOSH Boot Loader (${var.env_id})"

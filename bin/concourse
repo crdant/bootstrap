@@ -20,17 +20,9 @@ concourse_url="https://${concourse_host}"
 concourse_user=admin
 
 concourse_cert_cn="${concourse_host}"
-export concourse_cert_file=${ca_dir}/${concourse_host}/cert.pem
-export concourse_key_file=${ca_dir}/${concourse_host}/privkey.pem
-export concourse_chain_file=${ca_dir}/${concourse_host}/chain.pem
-
-ssl_certificates () {
-  echo "Creating SSL certificate..."
-
-  common_name="${concourse_host}"
-  org_unit="${env_id} Platform Automation"
-  create_certificate ${common_name} --domain "${concourse_host}"
-}
+export concourse_cert_file=${key_dir}/${concourse_host}/cert.pem
+export concourse_key_file=${key_dir}/${concourse_host}/privkey.pem
+export concourse_chain_file=${key_dir}/${concourse_host}/chain.pem
 
 stemcell () {
   bosh -e "${env_id}" upload-stemcell https://bosh.io/d/stemcells/bosh-${stemcell_iaas}-ubuntu-trusty-go_agent?v=${stemcell_version}
@@ -67,12 +59,14 @@ patch () {
   cp -r ${patch_dir}/${iaas}/${job}/terraform/. ${state_dir}/terraform
   cat <<TFVARS > ${state_dir}/vars/${job}.tfvars
 concourse_host="${concourse_host}"
+concourse_cert_file="${concourse_cert_file}"
+concourse_key_file="${concourse_key_file}"
 TFVARS
 
 }
 
 infra () {
-  bbl up --state-dir ${state_dir}
+  bbl up --debug --state-dir ${state_dir}
 }
 
 deploy () {
@@ -119,9 +113,6 @@ modernize_pipeline() {
 if [ $# -gt 0 ]; then
   while [ $# -gt 0 ]; do
     case $1 in
-      certificates | security )
-        ssl_certificates
-        ;;
       stemcell )
         stemcell
         ;;
