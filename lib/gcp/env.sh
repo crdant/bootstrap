@@ -16,5 +16,3 @@ plan_key_file="${key_dir}/${plan_service_account}.json"
 service_account_name="${short_id}"
 service_account="${service_account_name}@${project}.iam.gserviceaccount.com"
 key_file="${key_dir}/${service_account}.json"
-
-certbot_dns_args="--dns-google --dns-google-credentials ${key_file} --dns-google-propagation-seconds 120"
