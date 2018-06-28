@@ -12,6 +12,31 @@ resource "google_project_iam_member" "pks_service_account" {
   member  = "serviceAccount:${google_service_account.pks_service_account.email}"
 }
 
+resource "google_project_iam_member" "pks_service_account_instance" {
+  role    = "roles/compute.instanceAdmin"
+  member  = "serviceAccount:${google_service_account.pks_service_account.email}"
+}
+
+resource "google_project_iam_member" "pks_service_account_network" {
+  role    = "roles/compute.networkAdmin"
+  member  = "serviceAccount:${google_service_account.pks_service_account.email}"
+}
+
+resource "google_project_iam_member" "pks_service_account_disk" {
+  role    = "roles/compute.storageAdmin"
+  member  = "serviceAccount:${google_service_account.pks_service_account.email}"
+}
+
+resource "google_project_iam_member" "pks_service_account_storage" {
+  role    = "roles/storage.storageAdmin"
+  member  = "serviceAccount:${google_service_account.pks_service_account.email}"
+}
+
+resource "google_project_iam_member" "pks_service_account_user" {
+  role    = "roles/iam.serviceAccountUser"
+  member  = "serviceAccount:${google_service_account.pks_service_account.email}"
+}
+
 resource "local_file" "pks_service_account_key" {
   content  = "${base64decode(google_service_account_key.pks_service_account.private_key)}"
   filename = "${var.key_dir}/${google_service_account.pks_service_account.email}.json"
