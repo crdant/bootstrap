@@ -16,35 +16,35 @@ generate_cluster_template() {
 
   cat <<CLUSTER_TERRAFORM > ${state_dir}/terraform/${cluster_name}.tf
 resource "google_compute_address" "pks_cluster_${name}" {
-name = "\${var.env_id}-pks-${cluster_name}"
+  name = "\${var.env_id}-pks-${cluster_name}"
 }
 
 resource "google_dns_record_set" "pks_cluster_${name}" {
-name    = "${dns_name}."
-type = "A"
-ttl  = "\${var.dns_ttl}"
+  name    = "${dns_name}."
+  type = "A"
+  ttl  = "\${var.dns_ttl}"
 
-managed_zone = "\${data.google_dns_managed_zone.env_dns_zone.name}"
+  managed_zone = "\${data.google_dns_managed_zone.env_dns_zone.name}"
 
-rrdatas = [ "\${google_compute_address.pks_cluster_${name}.address}" ]
+  rrdatas = [ "\${google_compute_address.pks_cluster_${name}.address}" ]
 }
 
 resource "google_compute_target_pool" "pks_cluster_${name}" {
-name = "\${var.env_id}-pks-cluster"
-instances = [
-  "${master_zone}/${master_name}"
-]
+  name = "\${var.env_id}-pks-cluster"
+  instances = [
+    "${master_zone}/${master_name}"
+    ]
 }
 
 resource "google_compute_forwarding_rule" "pks_cluster_${name}" {
-name       = "\${var.env_id}-pks-${cluster_name}"
-target     = "\${google_compute_target_pool.pks_cluster_${name}.self_link}"
-ip_address = "\${google_compute_address.pks_cluster_${name}.self_link}"
-port_range = "8443"
+  name       = "\${var.env_id}-pks-${cluster_name}"
+  target     = "\${google_compute_target_pool.pks_cluster_${name}.self_link}"
+  ip_address = "\${google_compute_address.pks_cluster_${name}.self_link}"
+  port_range = "8443"
 }
 
 output "pks_cluster_lb_target_pool" {
-value = "\${google_compute_target_pool.pks_cluster_${name}.name}"
+  value = "\${google_compute_target_pool.pks_cluster_${name}.name}"
 }
 CLUSTER_TERRAFORM
 }
