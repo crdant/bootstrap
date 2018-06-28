@@ -8,14 +8,15 @@ variable "pks_uaa_port" {
 
 resource "google_compute_firewall" "pks_api" {
   name    = "${var.env_id}-pks-api"
-  network = "${google_compute_network.bbl-network.name}"
+  # shift to remote state
+  network = "pcf-${local.short_env_id}-virt-net"
 
   allow {
     protocol = "tcp"
     ports    = [ "${var.pks_api_port}", "${var.pks_uaa_port}" ]
   }
 
-  target_tags = [ "master" ]
+  target_tags = [ "${var.env_id}-pks-api" ]
 }
 
 resource "google_compute_address" "pks_api" {

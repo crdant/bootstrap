@@ -41,14 +41,15 @@ cluster() {
   dns_name=${name}.pks.pcf.bbl.gcp.crdant.io
 
   # create the cluster
-  pks create-cluster ${name}-cluster --plan small --external-hostname ${dns_name}
+  # pks create-cluster ${name}-cluster --plan small --external-hostname ${dns_name}
 
   # and wait until it is completed
-  status="in progress"
-  until [ status -eq "succeeded" || status -eq "failed" ]; do
-    $cluster_details="$(pks cluster neuromod-cluster --json)"
-    status="$(echo $cluster_detals | jq --raw-output '.last_action_state')"
-  done
+  # status="in progress"
+  # until [ "${status}" == "succeeded" ] || [ "${status}" == "failed" ]; do
+  #   cluster_details="$(pks cluster neuromod-cluster --json)"
+  #   status="$(echo $cluster_detals | jq --raw-output '.last_action_state')"
+  # done
+  cluster_details="$(pks cluster neuromod-cluster --json)"
 
   # grab info about the master...should be a data element but not available in the provider
   uuid="$(echo $cluster_details | jq --raw-output '.uuid')"
@@ -56,43 +57,43 @@ cluster() {
 
   # N.B. adjust for multi-master at some point
   master_name="$(echo ${master_instance} | jq --raw-output '.[].name')"
-  master_zone_uri="$(echo ${master_instance} | jq --raw-output '.[].zone' | echo "${url##*/}")"
+  master_zone_uri="$(echo ${master_instance} | jq --raw-output '.[].zone')"
   master_zone="${master_zone_uri##*/}"
 
-  cat > ${work_dir}/${cluster_name}.tf <<CLUSTER_TERRAFORM
+  cat <<CLUSTER_TERRAFORM > ${state_dir}/terraform/${cluster_name}.tf
 resource "google_compute_address" "pks_cluster_${name}" {
-  name = "${var.env_id}-pks-${cluster_name}"
+  name = "\${var.env_id}-pks-${cluster_name}"
 }
 
-resource "google_dns_record_set" "pks" {
+resource "google_dns_record_set" "pks_cluster_${name}" {
   name    = "${dns_name}."
   type = "A"
-  ttl  = "${var.dns_ttl}"
+  ttl  = "\${var.dns_ttl}"
 
-  managed_zone = "${data.terraform_remote_state.pcf_pipelines.google_dns_managed_zone.env_dns_zone}"
+  managed_zone = "\${data.google_dns_managed_zone.env_dns_zone.name}"
 
-  rrdatas = [ "${google_compute_address.pks_cluster_${name}.address}" ]
+  rrdatas = [ "\${google_compute_address.pks_cluster_${name}.address}" ]
 }
 
 resource "google_compute_target_pool" "pks_cluster_${name}" {
-  name = "${var.env_id}-pks-cluster"
+  name = "\${var.env_id}-pks-cluster"
   instances = [
-    "${master_zone}/${master_instance}"
+    "${master_zone}/${master_name}"
   ]
 }
 
 resource "google_compute_forwarding_rule" "pks_cluster_${name}" {
-  name       = "${var.env_id}-pks-${cluster_name}"
-  target     = "${google_compute_target_pool.pks_cluster_${name}.self_link}"
-  ip_address = "${google_compute_address.pks_cluster_${name}.self_link}"
+  name       = "\${var.env_id}-pks-${cluster_name}"
+  target     = "\${google_compute_target_pool.pks_cluster_${name}.self_link}"
+  ip_address = "\${google_compute_address.pks_cluster_${name}.self_link}"
   port_range = "8443"
 }
 
 output "pks_cluster_lb_target_pool" {
-  value = "${google_compute_target_pool.pks_cluster_${name}.name}"
+  value = "\${google_compute_target_pool.pks_cluster_${name}.name}"
 }
 CLUSTER_TERRAFORM
-
+  infra
   pks get-credentials ${cluster_name}
 }
 
