@@ -21,6 +21,7 @@ resource "acme_certificate" "pks" {
     provider = "route53"
 
     config {
+      AWS_HOSTED_ZONE_ID    = "${aws_route53_zone.bootstrap_dns_zone.zone_id}"
       AWS_ACCESS_KEY_ID     = "${var.access_key}"
       AWS_SECRET_ACCESS_KEY = "${var.secret_key}"
       AWS_DEFAULT_REGION    = "${var.region}"
