@@ -58,6 +58,32 @@ resource "aws_iam_user_policy_attachment" "pcf-bucket-access" {
     policy_arn = "${aws_iam_policy.pcf-bucket-access.arn}"
 }
 
+resource "aws_iam_policy" "pcf-create-blobstore" {
+  name = "${var.env_id}-pcf-create-blobstore"
+  policy = <<POLICY
+{
+  "Version": "2012-10-17",
+  "Statement":[
+     {
+        "Sid": "PCFBlobstoreBuckets",
+        "Effect":"Allow",
+        "Action":[
+           "s3:CreateBucket", "s3:ListAllMyBuckets", "s3:GetBucketLocation"
+        ],
+        "Resource":[
+           "arn:aws:s3:::*"
+        ]
+      }
+   ]
+}
+POLICY
+}
+
+resource "aws_iam_user_policy_attachment" "pcf-create-blobstore" {
+    user       = "${aws_iam_user.pcf.name}"
+    policy_arn = "${aws_iam_policy.pcf-create-blobstore.arn}"
+}
+
 output "pipeline_statefile_bucket" {
   value = "${aws_s3_bucket.pipeline_statefile_bucket.id}"
 }
