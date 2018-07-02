@@ -10,6 +10,6 @@ variable "key_dir" {
   type = "string"
 }
 
-locals {
-  env_components = "${split("-", var.env_id)}"
+output "short_env_id" {
+  value = "${var.short_env_id}"
 }
