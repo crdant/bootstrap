@@ -40,11 +40,13 @@ safe_auth () {
 vars () {
   atc_vault_token=`jq --raw-output '.auth.client_token' ${key_dir}/atc-${env_id}-token.json`
   vault_cert_file=${ca_dir}/vault.${subdomain}/cert.pem
+  # TO DO: get from configuration or a call to the vault script
+  vault_addr=https://vault.${subdomain}:8200
   concourse_password="$(safe get secret/bootstrap/concourse/admin:value)"
   cat <<VAR_ARGUMENTS
     --var concourse-url="${concourse_url}" --var concourse-user=${concourse_user} --var concourse-password=${concourse_password}
     --var-file atc-cert-file=${concourse_cert_file} --var-file atc-key-file=${concourse_key_file}
-    --var atc-vault-token=${atc_vault_token}  --var-file vault-cert-file=${vault_cert_file}
+    --var vault-address=${vault_addr} --var atc-vault-token=${atc_vault_token}  --var-file vault-cert-file=${vault_cert_file}
 VAR_ARGUMENTS
 }
 
