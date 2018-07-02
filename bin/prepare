@@ -50,6 +50,7 @@ patch() {
   cp -r ${patch_dir}/${iaas}/${job}/. ${state_dir}
 
   cat <<TFVARS > ${state_dir}/vars/${job}.tfvars
+domain="${domain}"
 bootstrap_domain="${subdomain}"
 bootstrap_domain_token="${subdomain}"
 dns_ttl="${dns_ttl}"
