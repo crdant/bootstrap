@@ -8,7 +8,7 @@ releases:
 instance_groups:
 - instances: 1
   name: vault
-  networks: [{name: private, static_ips: ((vault-static-ip)), default: [dns, gateway]}]
+  networks: [{name: private}]
   persistent_disk: 4096
   properties:
     vault:
