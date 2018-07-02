@@ -11,17 +11,17 @@ variable "pcf_apps_subdomain" {
 }
 
 locals {
-  pcf_uaa_subdomain = "*.uaa.${pcf_system_subdomain}.${var.pcf_subdomain}"
-  pcf_login_subdomain = "*.login.${pcf_system_subdomain}.${var.pcf_subdomain}"
+  pcf_uaa_subdomain = "uaa.${var.pcf_system_subdomain}"
+  pcf_login_subdomain = "login.${var.pcf_system_subdomain}"
 }
 
 resource "acme_certificate" "pcf_wildcard" {
   account_key_pem           = "${acme_registration.letsencrypt.account_key_pem}"
   common_name               = "${var.pcf_subdomain}"
   subject_alternative_names = [
-    "*.${var.pcf_system_subdomain}.${var.pcf_subdomain}"
-    "*.${local.pcf_uaa_subdomain}.${var.pcf_subdomain}"
-    "*.${local.pcf_login_subdomain}.${var.pcf_subdomain}"
+    "*.${var.pcf_system_subdomain}.${var.pcf_subdomain}",
+    "*.${local.pcf_uaa_subdomain}.${var.pcf_subdomain}",
+    "*.${local.pcf_login_subdomain}.${var.pcf_subdomain}",
     "*.${var.pcf_apps_subdomain}.${var.pcf_subdomain}"
   ]
 
@@ -29,7 +29,7 @@ resource "acme_certificate" "pcf_wildcard" {
     provider = "route53"
 
     config {
-      AWS_HOSTED_ZONE_ID    = "${aws_route53_zone.bootstrap_dns_zone.zone_id}"
+      AWS_HOSTED_ZONE_ID    = "${aws_route53_zone.pcf_dns_zone.id}"
       AWS_ACCESS_KEY_ID     = "${var.access_key}"
       AWS_SECRET_ACCESS_KEY = "${var.secret_key}"
       AWS_DEFAULT_REGION    = "${var.region}"

@@ -729,6 +729,8 @@ infra
 prepare_concourse
 concourse_login
 download
+patch
+infra
 set -e
 secrets
 params

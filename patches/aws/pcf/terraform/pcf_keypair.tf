@@ -1,7 +1,3 @@
-variable "key_dir" {
-  type = "string"
-}
-
 resource "tls_private_key" "pcf_ssh_key" {
   algorithm   = "RSA"
   rsa_bits    = 4096

@@ -1,7 +1,3 @@
-variable "short_id" {
-  type = "string"
-}
-
 resource "aws_iam_role" "pcf" {
   name = "${var.env_id}_pcf_role"
   path = "/"
@@ -42,11 +38,11 @@ resource "aws_iam_policy" "pcf" {
             "iam:*"
         ],
         "Resource": [
-            "arn:aws:iam::*:user/${var.short_id}*",
-            "arn:aws:iam::*:user/system/${var.short_id}*",
-            "arn:aws:iam::*:role/${var.short_id}*",
-            "arn:aws:iam::*:instance-profile/${var.short_id}*",
-            "arn:aws:iam::*:policy/${var.short_id}*"
+            "arn:aws:iam::*:user/${var.short_env_id}*",
+            "arn:aws:iam::*:user/system/${var.short_env_id}*",
+            "arn:aws:iam::*:role/${var.short_env_id}*",
+            "arn:aws:iam::*:instance-profile/${var.short_env_id}*",
+            "arn:aws:iam::*:policy/${var.short_env_id}*"
         ]
     },
     {
@@ -113,16 +109,16 @@ resource "aws_iam_policy" "pcf" {
             "s3:*"
         ],
         "Resource": [
-            "arn:aws:s3:::${var.short_id}-bosh",
-            "arn:aws:s3:::${var.short_id}-bosh/*",
-            "arn:aws:s3:::${var.short_id}-buildpacks",
-            "arn:aws:s3:::${var.short_id}-buildpacks/*",
-            "arn:aws:s3:::${var.short_id}-packages",
-            "arn:aws:s3:::${var.short_id}-packages/*",
-            "arn:aws:s3:::${var.short_id}-resources",
-            "arn:aws:s3:::${var.short_id}-resources/*",
-            "arn:aws:s3:::${var.short_id}-droplets",
-            "arn:aws:s3:::${var.short_id}-droplets/*"
+            "arn:aws:s3:::${var.short_env_id}-bosh",
+            "arn:aws:s3:::${var.short_env_id}-bosh/*",
+            "arn:aws:s3:::${var.short_env_id}-buildpacks",
+            "arn:aws:s3:::${var.short_env_id}-buildpacks/*",
+            "arn:aws:s3:::${var.short_env_id}-packages",
+            "arn:aws:s3:::${var.short_env_id}-packages/*",
+            "arn:aws:s3:::${var.short_env_id}-resources",
+            "arn:aws:s3:::${var.short_env_id}-resources/*",
+            "arn:aws:s3:::${var.short_env_id}-droplets",
+            "arn:aws:s3:::${var.short_env_id}-droplets/*"
         ]
     },
     {
