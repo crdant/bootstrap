@@ -14,8 +14,8 @@ resource "acme_certificate" "vault" {
     provider = "route53"
 
     config {
-      AWS_ACCESS_KEY_ID     = "${var.aws_access_key}"
-      AWS_SECRET_ACCESS_KEY = "${var.aws_secret_key}"
+      AWS_ACCESS_KEY_ID     = "${var.access_key}"
+      AWS_SECRET_ACCESS_KEY = "${var.secret_key}"
       AWS_DEFAULT_REGION    = "${var.region}"
     }
   }
