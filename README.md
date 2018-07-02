@@ -63,7 +63,7 @@ Homebrew, so Mac users can run `brew install cloudfoundry/tap/bbl`.
 ## Coming soon
 
 1. Deploy concourse with standard manifest plus ops files from [concourse-deployment](https://github.com/concourse/concourse-deployment)
-~~1. Make cloud config changes idempotent.~~
+1. ~~Make cloud config changes idempotent.~~
 1. Use Credhub (created by `bbl` or standalone) instead of deploying/managing vault.
 1. Windows in PCF and concourse
 1. PCF tile support
@@ -73,5 +73,5 @@ Homebrew, so Mac users can run `brew install cloudfoundry/tap/bbl`.
 1. Making this document more readable and useful.
 1. Making secrets highly available.
 1. Making LDAP highly available.
-~~1. Other IaaSes.~~
+1. Other IaaSes. ~~AWS~~
 1. Rewrite in a programming language for better modularity and invocation across modules
