@@ -17,7 +17,6 @@ pcf_concourse_user=pivotal
 
 pcf_pipelines_remote="https://github.com/pivotal-cf/pcf-pipelines.git"
 pcf_pipelines_local=${workdir}/pcf-pipelines
-pcf_pipelines_version="v0.23.4"
 
 pcf_install_pipeline="deploy-pcf"
 pcf_install_pipeline_file="${workdir}/pcf-pipelines/install-pcf/${iaas}/pipeline.yml"

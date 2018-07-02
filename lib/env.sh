@@ -1,14 +1,15 @@
 email=cdantonio@pivotal.io
 pivnet_token=${PIVNET_TOKEN}
 domain=crdant.io
-iaas=gcp
+iaas=aws
 
 domain_token=`echo ${domain} | tr . -`
 subdomain="bbl.${iaas}.${domain}"
 subdomain_token=`echo ${subdomain} | tr . -`
 
-om_version_regex="^2\.0\.[0-9]+$"
-pas_version_regex="^2\.0\.[0-9]+$"
+om_version_regex="^2\.1\.[0-9]+$"
+pas_version_regex="^2\.2\.[0-9]+$"
+pcf_pipelines_version="v0.23.5"
 
 lib_dir="${BASEDIR}/lib"
 state_dir="${BASEDIR}/state"
