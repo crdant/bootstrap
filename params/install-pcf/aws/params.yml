@@ -1,0 +1,141 @@
+# AMI to use for nat box
+# Update with the correct NAT AMI for your region. List of AMIs can be found
+# here: https://github.com/pivotal-cf/terraforming-aws/blob/master/nat.tf
+amis_nat: ami-69ae8259
+
+# Ciphers
+# An ordered, colon-delimited list of Golang supported TLS cipher suites in OpenSSL format.
+# Operators should verify that these are supported by any clients or downstream components that will initiate TLS handshakes with the Router/HAProxy.
+# The recommended settings are filled in below, change as necessary.
+router_tls_ciphers: "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384"
+haproxy_tls_ciphers: "DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384"
+
+# For credhub integration, replace dummy values in the following structure
+# and set the number of credhub instances in resource config to 2
+credhub_encryption_keys: |
+  - name: ((credhub_encryption_key_name1))
+    key:
+      secret: ((credhub_encryption_key_secret1))
+    primary: true
+  - name: ((credhub_encryption_key_name2))
+    key:
+      secret: ((credhub_encryption_key_secret2))
+  - name: ((credhub_encryption_key_name3))
+    key:
+      secret: ((credhub_encryption_key_secret3))
+
+# C2C Networking network CIDR
+container_networking_nw_cidr: 10.255.0.0/16
+
+# Optional PEM-encoded certificates to add to BOSH VMs
+director_certificates:
+
+# Errands to disable prior to deploying ERT
+# Valid values:
+#   all
+#   none
+#   "" (empty string - equivalent to none)
+#   Any combination of the following, separated by comma:
+#     bootstrap
+#     deploy-autoscaler
+#     deploy-notifications
+#     deploy-notifications-ui
+#     nfsbrokerpush
+#     push-apps-manager
+#     push-pivotal-account
+#     push-usage-service
+#     rejoin-unsafe
+#     send-email
+#     smoke_tests
+#     test-autoscaling
+ert_errands_to_disable: none
+
+# Optional. Duration in seconds to maintain an open connection when client supports keep-alive.
+frontend_idle_timeout: 61
+
+# Optional - if your git repo requires an SSH key.
+git_private_key:
+
+haproxy_forward_tls: enable # If enabled HAProxy will forward all requests to the router over TLS (enable|disable)
+haproxy_backend_ca:         # Required if haproxy_forward_tls is enabled - HAProxy will use the CA provided to verify the certificates provided by the router.
+
+# Whether or not the ERT VMs are internet connected.
+internet_connected: false
+
+# MySQL backup is handled in the `pcf` script file, but these params need to be blank for the pipeline's SCP option
+mysql_backups_scp_cron_schedule:
+mysql_backups_scp_destination:
+mysql_backups_scp_key:
+mysql_backups_scp_port:
+mysql_backups_scp_server:
+mysql_backups_scp_user:
+
+# CIDRs to allow HTTPS access to Operations Manager from
+opsman_allow_https_cidr_ranges: 0.0.0.0/0
+
+# CIDRs to allow SSH access to Operations Manager from; configure PEM as well with the private key
+opsman_allow_ssh_cidr_ranges: 0.0.0.0/0
+
+opsman_client_id:
+opsman_client_secret:
+
+# Optional. If blank the cert(s) will be generated:
+networking_poe_ssl_certs:
+
+# Optional - these certificates can be used to validate the certificates from incoming client requests.
+# All CA certificates should be appended together into a single collection of PEM-encoded entries.
+routing_custom_ca_certificates:
+
+# Disable HTTP on gorouters - do not set this param to anything other than `false`; ssl is terminated at the load balancer
+routing_disable_http: false
+
+# Support for the X-Forwarded-Client-Cert header. Possible values: (load_balancer|ha_proxy|router)
+routing_tls_termination: load_balancer
+
+# Setting appropriate Application Security Groups is critical for a secure
+# deployment. Change the value of the param below to "X" to acknowledge that
+# once the Elastic Runtime deployment completes, you will review and set the
+# appropriate application security groups.
+# See https://docs.pivotal.io/pivotalcf/opsguide/app-sec-groups.html
+security_acknowledgement: X
+
+# Subnets
+#   Pipeline uses six types of network: Public, Elastic Runtime, Services, Dynamic Services and RDS and Infrastructure networks
+#
+#   * Public Network: Ops manager and Nat boxes who needs public internet accessible through internet gateway
+#   * Elastic Runtime network: Cloud Foundry components, **three subnets on three AZs to achieve HA**
+#   * Services network: Deploy PCF tile services, **three subnets on three AZs to achieve HA**
+#   * Dynamic Services network: Deploy dynamic services, **three subnets on three AZs to achieve HA**
+#   * RDS network: Deploy RDS databases, **three subnets on three AZs to achieve HA**
+#   * Infrastructure network: Deploy Bosh director
+dynamic_services_subnet_cidr_az1: 192.168.112.0/22
+dynamic_services_subnet_cidr_az2: 192.168.128.0/22
+dynamic_services_subnet_cidr_az3: 192.168.144.0/22
+dynamic_services_subnet_reserved_ranges_z1: 192.168.112.0 - 192.168.112.10
+dynamic_services_subnet_reserved_ranges_z2: 192.168.128.0 - 192.168.128.10
+dynamic_services_subnet_reserved_ranges_z3: 192.168.144.0 - 192.168.144.10
+ert_subnet_cidr_az1: 192.168.16.0/20
+ert_subnet_cidr_az2: 192.168.32.0/20
+ert_subnet_cidr_az3: 192.168.48.0/20
+ert_subnet_reserved_ranges_z1: 192.168.16.0 - 192.168.16.10
+ert_subnet_reserved_ranges_z2: 192.168.32.0 - 192.168.32.10
+ert_subnet_reserved_ranges_z3: 192.168.48.0 - 192.168.48.10
+infra_subnet_cidr_az1: 192.168.6.0/24
+infra_subnet_reserved_ranges_z1: 192.168.6.0 - 192.168.6.10
+nat_ip_az1: 192.168.0.6
+nat_ip_az2: 192.168.1.6
+nat_ip_az3: 192.168.2.6
+opsman_ip_az1: 192.168.0.7
+public_subnet_cidr_az1: 192.168.0.0/24
+public_subnet_cidr_az2: 192.168.1.0/24
+public_subnet_cidr_az3: 192.168.2.0/24
+rds_subnet_cidr_az1: 192.168.3.0/24
+rds_subnet_cidr_az2: 192.168.4.0/24
+rds_subnet_cidr_az3: 192.168.5.0/24
+services_subnet_cidr_az1: 192.168.64.0/20
+services_subnet_cidr_az2: 192.168.80.0/20
+services_subnet_cidr_az3: 192.168.96.0/20
+services_subnet_reserved_ranges_z1: 192.168.64.0 - 192.168.64.10
+services_subnet_reserved_ranges_z2: 192.168.80.0 - 192.168.80.10
+services_subnet_reserved_ranges_z3: 192.168.96.0 - 192.168.96.10
+vpc_cidr: 192.168.0.0/16

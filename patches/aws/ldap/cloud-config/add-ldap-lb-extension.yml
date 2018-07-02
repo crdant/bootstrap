@@ -1,0 +1,9 @@
+- type: replace
+  path: /vm_extensions/-
+  value:
+    name: ((job))-lb
+    cloud_properties:
+      security_groups:
+      - ((ldap_lb_internal_security_group))
+      - ((internal_security_group))
+      lb_target_groups: ((vault_lb_target_groups))

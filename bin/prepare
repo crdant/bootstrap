@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 BASEDIR=$(dirname $(dirname $0))
 . "${BASEDIR}/lib/env.sh"
+
+# allow for iaas customizations
+if [ -f ${lib_dir}/${iaas}/prepare.sh ] ; then
+  . ${lib_dir}/${iaas}/prepare.sh
+fi
+
 set -e
 
 if [ ! -d ${workdir} ] ; then
@@ -15,80 +21,88 @@ if [ ! -d ${state_dir} ] ; then
   mkdir -p ${state_dir}
 fi
 
-service_accounts() {
-  echo "Configuring service accounts..."
-  gcloud iam service-accounts --project "${project}" create "${service_account_name}" --display-name "BOSH Boot Loader (bbl)" --no-user-output-enabled
-  gcloud iam service-accounts --project "${project}" keys create "${key_file}"  --iam-account "${service_account}" --no-user-output-enabled
-  gcloud projects add-iam-policy-binding "${project}" --member "serviceAccount:${service_account}" --role "roles/editor" --no-user-output-enabled
+plugins () {
+  local terraform_plugin_dir="${state_dir}/terraform/.terraform/plugins/darwin_amd64"
+  curl -qks -o ${workdir}/terraform-provider-acme_v1.0.0_darwin_amd64.zip https://github.com/vancluever/terraform-provider-acme/releases/download/v1.0.0/terraform-provider-acme_v1.0.0_darwin_amd64.zip
+  if [ ! -d ${terraform_plugin_dir} ] ; then
+    mkdir -p ${terraform_plugin_dir}
+  fi;
+  unzip -d ${terraform_plugin_dir} ${workdir}/terraform-provider-acme_v1.0.0_darwin_amd64.zip
 }
 
-ca () {
-  certstrap --depot-path "${ca_dir}" init --common-name "${ca_name}"
+trust() {
+  # golang commands don't love Let's Encrypt
+  wget -O ${ca_cert_file} https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt
+}
+
+plan() {
+  if [ -n "$(type -t pre_plan)" ] ; then
+    pre_plan
+  fi
+
+  # N.B: This will create concourse load balancers before we need them. Annoys me but it's painful
+  #      to do it later. See about a PR to the team for it.
+  bbl plan --state-dir ${state_dir} --debug --lb-type concourse
+}
+
+patch() {
+  local job="bootstrap"
+  cp -r ${patch_dir}/${iaas}/${job}/. ${state_dir}
+
+  cat <<TFVARS > ${state_dir}/vars/${job}.tfvars
+bootstrap_domain="${subdomain}"
+bootstrap_domain_token="${subdomain}"
+dns_ttl="${dns_ttl}"
+key_dir="${key_dir}"
+email="${email}"
+TFVARS
 }
 
 director() {
   echo "Creating the $env_id BOSH director..."
-  bbl up --state-dir ${state_dir} --iaas gcp --gcp-service-account-key "${key_file}" --gcp-region "${region}"
-  env_id=`bbl env-id --state-dir ${state_dir} --gcp-service-account-key "${key_file}"`
-  firewall
-}
+  bbl up --state-dir ${state_dir} --debug
+  env_id=$(bbl env-id --state-dir ${state_dir})
 
-firewall() {
-  # add missing firewall rule to allow jumpbox to tunnel to all BOSH managed vms -- needed for BOSH ssh among other things
-  env_id=`bbl env-id --state-dir ${state_dir} --gcp-service-account-key "${key_file}"`
-  gcloud --project "${project}" compute firewall-rules update ${env_id}-bosh-open --target-tags=${env_id}-bosh-director,${env_id}-internal
-}
-
-dns () {
-  # TODO: move this to prepare.sh
-  gcloud dns managed-zones --project ${project} create ${dns_zone} --dns-name "${subdomain}." --description "Zone for ${subdomain}"
-
-  # TO DO: put this in here like in https://github.com/crdant/pcf-on-gcp
-  # update_root_dns
-  # echo "Waiting for ${DNS_TTL} seconds for the Root DNS to sync up..."
-  # sleep "${DNS_TTL}"
+  if [ -n "$(type -t pre_plan)" ] ; then
+    post_director
+  fi
 }
 
 client() {
   echo "Configuring BOSH client for the $env_id director..."
-  # can't reuse bbl print-env --state-dir ${state_dir} without redoing the tunnel (with new port), so be aware of that by saving the variable setting
-  bbl_env=`bbl print-env --state-dir ${state_dir} --gcp-service-account-key "${key_file}"`
-  echo "${bbl_env}" | sed '/ssh/ d' > ${workdir}/bbl-env.sh
-  chmod 755 ${workdir}/bbl-env.sh
-  eval "$bbl_env"
+  eval "$(bbl print-env)"
   # store the ssh key for easy use
   if [ -f ${key_dir}/id_jumpbox_${env_id}.pem ] ; then
     chmod 600 ${key_dir}/id_jumpbox_${env_id}.pem
   fi
-  bbl ssh-key --state-dir ${state_dir} --gcp-service-account-key "${key_file}" > ${key_dir}/id_jumpbox_${env_id}.pem
+  bbl ssh-key --state-dir ${state_dir} > ${key_dir}/id_jumpbox_${env_id}.pem
   chmod 400 ${key_dir}/id_jumpbox_${env_id}.pem
 
-  bosh_ca_cert=`bbl director-ca-cert --state-dir ${state_dir} --gcp-service-account-key "${key_file}"`
-  bosh_director_address=`bbl director-address --state-dir ${state_dir} --gcp-service-account-key "${key_file}"`
-  bosh alias-env --environment="${bosh_director_address}" --ca-cert="${bosh_ca_cert}" `bbl env-id --state-dir ${state_dir} --gcp-service-account-key "${key_file}"`
+  bosh_ca_cert=$(bbl director-ca-cert --state-dir ${state_dir})
+  bosh_director_address=$(bbl director-address --state-dir ${state_dir})
+  bosh alias-env --environment="${bosh_director_address}" --ca-cert="${bosh_ca_cert}" $(bbl env-id --state-dir ${state_dir})
 }
 
 login() {
   echo "Logging into the $env_id director..."
   . "${workdir}/bbl-env.sh"
-  bosh log-in -e `bbl env-id --state-dir ${state_dir} --gcp-service-account-key "${key_file}"` --client="${BOSH_CLIENT}" --client-secret="${BOSH_CLIENT_SECRET}"
-}
-
-trust () {
-  security add-trusted-cert -d -p ssl -k ${HOME}/Library/Keychains/login.keychain ${ca_cert_file}
+  bosh log-in -e $(bbl env-id --state-dir ${state_dir}) --client="${BOSH_CLIENT}" --client-secret="${BOSH_CLIENT_SECRET}"
 }
 
 if [ $# -gt 0 ]; then
   while [ $# -gt 0 ]; do
     case $1 in
-      accounts )
-        service_accounts
+      plugins )
+        plugins
         ;;
-      ca )
-        ca
+      trust )
+        trust
         ;;
-      dns )
-        dns
+      plan )
+        plan
+        ;;
+      patch )
+        patch
         ;;
       director )
         director
@@ -102,23 +116,20 @@ if [ $# -gt 0 ]; then
       login )
         login
         ;;
-      trust )
-        trust
-        ;;
       * )
         echo "Unrecognized option: $1" 1>&2
         exit 1
         ;;
     esac
     shift
-    exit
   done
+  exit
 fi
 
-service_accounts
-ca
+plugins
+trust
+plan
+patch
 director
-dns
 client
 login
-trust

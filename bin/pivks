@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+BASEDIR=$(dirname $(dirname $0))
+. "${BASEDIR}/lib/env.sh"
+. "${BASEDIR}/lib/secrets.sh"
+. "${BASEDIR}/lib/generate_passphrase.sh"
+. "${BASEDIR}/lib/${iaas}/pivks.sh"
+
+wildcard_domain="*.pks.pcf.${subdomain}"
+pcf_dns_zone="pcf-${short_id}-zone"
+api_load_balancer_name="pcf-${short_id}-pks-api-router"
+cluster_load_balancer_name="pcf-${short_id}-pks-cluster"
+
+export pks_cert_file=${key_dir}/pks.pcf.${subdomain}/cert.pem
+export pks_key_file=${key_dir}/pks.pcf.${subdomain}/privkey.pem
+
+pks_api_port=9021
+pks_uaa_port=8443
+
+patch() {
+  local job="pks"
+
+  cp -r ${patch_dir}/${iaas}/${job}/terraform/. ${state_dir}/terraform
+
+  cat <<TFVARS > ${state_dir}/vars/${job}.tfvars
+pks_subdomain="pks.pcf.${subdomain}"
+pks_wildcard="${wildcard_domain}"
+pks_api_port="${pks_api_port}"
+pks_uaa_port="${pks_uaa_port}"
+pks_wildcard_cert="${pks_cert_file}"
+pks_wildcard_key="${pks_key_file}"
+TFVARS
+}
+
+infra() {
+  bbl up --state-dir ${state_dir} --debug
+}
+
+cluster() {
+  name=${1}
+
+  cluster_name=${name}-cluster
+  dns_name=${name}.pks.pcf.bbl.gcp.crdant.io
+
+  # create the cluster
+  pks create-cluster ${name}-cluster --plan small --external-hostname ${dns_name} > /dev/null
+
+  # and wait until it is completed
+  status="in progress"
+  until [ "${status}" == "succeeded" ] || [ "${status}" == "failed" ]; do
+    cluster_details="$(pks cluster ${cluster_name} --json)"
+    status="$(echo $cluster_details | jq --raw-output '.last_action_state')"
+    echo "status: ${status}"
+  done
+
+  generate_cluster_template ${name}
+  infra
+
+  pks get-credentials ${cluster_name}
+}
+
+if [ $# -gt 0 ]; then
+  while [ $# -gt 0 ]; do
+    case $1 in
+      patch)
+        patch
+        ;;
+      infra)
+        infra
+        ;;
+      cluster)
+        cluster_name=${2}
+        shift
+        cluster ${cluster_name}
+        ;;
+      *)
+        echo "Unrecognized option: $1" 1>&2
+        exit 1
+        ;;
+    esac
+    shift
+  done
+  exit
+fi
+
+security
+load_balancers
+dns
+firewall_rules

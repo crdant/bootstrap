@@ -8,7 +8,7 @@ releases:
 instance_groups:
 - name: ldap
   instances: 1
-  vm_type: n1-standard-1
+  vm_type: small
   vm_extensions:
     - ldap-lb
   stemcell: trusty

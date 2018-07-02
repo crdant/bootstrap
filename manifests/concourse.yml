@@ -18,7 +18,7 @@ instance_groups:
 - name: web
   instances: 1
   # replace with a VM type from your BOSH Director's cloud config
-  vm_type: n1-standard-1
+  vm_type: small
   vm_extensions:
   # replace with a VM extension from your BOSH Director's cloud config that will attach
   # this instance group to your ELB
@@ -52,7 +52,7 @@ instance_groups:
           password: ((postgres_password))
 
       vault:
-        url: https://10.0.31.195:8200
+        url: https://vault.bbl.gcp.crdant.io:8200
         auth:
           backend: token
           client_token: ((atc-vault-token))
@@ -72,7 +72,7 @@ instance_groups:
 - name: db
   instances: 1
   # replace with a VM type from your BOSH Director's cloud config
-  vm_type: n1-standard-1
+  vm_type: small
   stemcell: trusty
   # replace with a disk type from your BOSH Director's cloud config
   persistent_disk_type: 5GB
@@ -92,7 +92,7 @@ instance_groups:
 - name: worker
   instances: 1
   # replace with a VM type from your BOSH Director's cloud config
-  vm_type: n1-standard-1
+  vm_type: small
   vm_extensions:
   # replace with a VM extension from your BOSH Director's cloud config that will attach
   # sufficient ephemeral storage to VMs in this instance group.
@@ -102,7 +102,7 @@ instance_groups:
   networks: [{name: private}]
   jobs:
   - release: concourse
-    name: groundcrew
+    name: worker
     consumes: {baggageclaim: {from: worker-baggageclaim}}
     properties:
       drain_timeout: 10m
