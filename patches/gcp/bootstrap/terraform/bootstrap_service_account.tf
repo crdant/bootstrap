@@ -22,6 +22,11 @@ resource "google_project_iam_member" "bootstrap_service_account_keys" {
   member  = "serviceAccount:${google_service_account.bootstrap_service_account.email}"
 }
 
+resource "google_project_iam_member" "bootstrap_project_iam" {
+  role = "roles/resourcemanager.projectIamAdmin"
+  member  = "serviceAccount:${google_service_account.bootstrap_service_account.email}"
+}
+
 resource "local_file" "service_account_key" {
   content  = "${base64decode(google_service_account_key.bootstrap_service_account.private_key)}"
   filename = "${var.key_dir}/${google_service_account.bootstrap_service_account.email}.json"

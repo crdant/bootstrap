@@ -28,7 +28,7 @@ resource "google_project_iam_member" "pcf_service_account_disk" {
 }
 
 resource "google_project_iam_member" "pcf_service_account_storage" {
-  role    = "roles/storage.storageAdmin"
+  role    = "roles/storage.admin"
   member  = "serviceAccount:${google_service_account.pcf_service_account.email}"
 }
 
