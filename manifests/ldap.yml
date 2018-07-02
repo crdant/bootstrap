@@ -13,7 +13,7 @@ instance_groups:
     - ldap-lb
   stemcell: trusty
   azs: [z2]
-  networks: [{name: private, static_ips: ((ldap-static-ip)), default: [dns, gateway]}]
+  networks: [{name: private}]
   jobs:
   - name: ldap-server
     release: openldap

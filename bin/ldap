@@ -7,12 +7,10 @@ stemcell_version=3431.13
 
 ldap_release_repository=https://github.com/cloudfoundry-community/openldap-boshrelease.git
 ldap_host="ldap.${subdomain}"
-ldap_static_ip=10.0.32.195
 
 export ldap_cert_file=${key_dir}/${ldap_host}/cert.pem
 export ldap_key_file=${key_dir}/${ldap_host}/privkey.pem
 
-# ldap_static_ip=10.244.0.2
 ldap_port=636
 
 stemcell () {
@@ -86,7 +84,7 @@ interpolate () {
 
   vars
   bosh interpolate ${manifest} \
-    --var olc-suffix="${ldap_olc_suffix}" --var olc-root-dn="${ldap_olc_root_dn}" --var olc-root-password="${ldap_olc_root_password}" --var ldap-static-ip="${ldap_static_ip}" \
+    --var olc-suffix="${ldap_olc_suffix}" --var olc-root-dn="${ldap_olc_root_dn}" --var olc-root-password="${ldap_olc_root_password}"  \
     --var-file ldap-cert="${ldap_cert_file}" --var-file ldap-key="${ldap_key_file}"
 }
 
@@ -95,7 +93,7 @@ deploy () {
 
   vars
   bosh -n -e ${env_id} -d openldap deploy ${manifest} \
-    --var olc-suffix="${ldap_olc_suffix}" --var olc-root-dn="${ldap_olc_root_dn}" --var olc-root-password="${ldap_olc_root_password}" --var ldap-static-ip="${ldap_static_ip}" \
+    --var olc-suffix="${ldap_olc_suffix}" --var olc-root-dn="${ldap_olc_root_dn}" --var olc-root-password="${ldap_olc_root_password}" \
     --var-file ldap-cert="${ldap_cert_file}" --var-file ldap-key="${ldap_key_file}"
 }
 
