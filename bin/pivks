@@ -42,13 +42,14 @@ cluster() {
   dns_name=${name}.pks.pcf.bbl.gcp.crdant.io
 
   # create the cluster
-  pks create-cluster ${name}-cluster --plan small --external-hostname ${dns_name}
+  pks create-cluster ${name}-cluster --plan small --external-hostname ${dns_name} > /dev/null
 
   # and wait until it is completed
   status="in progress"
   until [ "${status}" == "succeeded" ] || [ "${status}" == "failed" ]; do
     cluster_details="$(pks cluster ${cluster_name} --json)"
-    status="$(echo $cluster_detals | jq --raw-output '.last_action_state')"
+    status="$(echo $cluster_details | jq --raw-output '.last_action_state')"
+    echo "status: ${status}"
   done
 
   generate_cluster_template ${name}

@@ -30,7 +30,7 @@ resource "google_dns_record_set" "pks_cluster_${name}" {
 }
 
 resource "google_compute_target_pool" "pks_cluster_${name}" {
-  name = "\${var.env_id}-pks-cluster"
+  name = "\${var.env_id}-pks-${cluster_name}"
   instances = [
     "${master_zone}/${master_name}"
     ]
@@ -43,7 +43,7 @@ resource "google_compute_forwarding_rule" "pks_cluster_${name}" {
   port_range = "8443"
 }
 
-output "pks_cluster_lb_target_pool" {
+output "pks_${name}_cluster_lb_target_pool" {
   value = "\${google_compute_target_pool.pks_cluster_${name}.name}"
 }
 CLUSTER_TERRAFORM

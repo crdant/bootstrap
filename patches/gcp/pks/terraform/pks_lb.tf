@@ -6,7 +6,7 @@ variable "pks_uaa_port" {
   type = "string"
 }
 
-resource "google_compute_firewall" "pks_api" {
+resource "google_compute_firewall" "pks" {
   name    = "${var.env_id}-pks-api"
   # shift to remote state
   network = "pcf-${local.short_env_id}-virt-net"
