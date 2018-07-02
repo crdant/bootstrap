@@ -10,6 +10,14 @@ variable "pcf_apps_subdomain" {
   type = "string"
 }
 
+variable "pcf_cert_file" {
+  type = "string"
+}
+
+variable "pcf_key_file" {
+  type = "string"
+}
+
 locals {
   pcf_uaa_subdomain = "uaa.${var.pcf_system_subdomain}"
   pcf_login_subdomain = "login.${var.pcf_system_subdomain}"
@@ -48,6 +56,16 @@ resource "aws_iam_server_certificate" "pcf_wildcard" {
   provisioner "local-exec" {
     command = "sleep 10"
   }
+}
+
+resource "local_file" "pcf_cert" {
+  content  = "${acme_certificate.pcf_wildcard.certificate_pem}"
+  filename = "${var.pcf_cert_file}"
+}
+
+resource "local_file" "pcf_key" {
+  content  = "${acme_certificate.pcf_wildcard.private_key_pem}"
+  filename = "${var.pcf_key_file}"
 }
 
 output "pcf_wildcard_cert_arn" {

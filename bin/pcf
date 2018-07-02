@@ -36,9 +36,6 @@ buildpack_upgrade_parameter_file="${workdir}/${env_id}-${buildpack_upgrade_pipel
 
 ops_dir=${BASEDIR}/pipelines/ops
 
-pcf_service_account_name="${short_id}-pcf"
-pcf_service_account="${pcf_service_account_name}@${project}.iam.gserviceaccount.com"
-pcf_key_file=${key_dir}/${pcf_service_account}.json
 pcf_dns_zone="pcf-${short_id}-zone"         # TO DO: See if I can get this from the Terraform state (or even the pipelines terraform file)
 
 pcf_subdomain="pcf.${subdomain}"
@@ -48,6 +45,9 @@ pcf_apps_subdomain="apps"
 pcf_apps_domain="${pcf_apps_subdomain}.${pcf_subdomain}"
 opsman_host="manager"
 opsman_fqdn="${opsman_host}.${pcf_subdomain}"
+
+pcf_tls_key_file="${key_dir}/${pcf_subdomain}/privkey.pem"
+pcf_tls_cert_file="${key_dir}/${pcf_subdomain}/cert.pem"
 
 mysql_backup_bucket=${short_id}-mysql-backups
 mysql_backup_schedule="0 0/72 * * *"
@@ -69,6 +69,8 @@ opsman_host="${opsman_host}"
 pcf_wildcard_cert="${key_dir}/${pcf_subdomain}/cert.pem"
 pcf_wildcard_key="${key_dir}/${pcf_subdomain}/privkey.pem"
 pcf_wildcard_chain="${key_dir}/${pcf_subdomain}/chain.pem"
+pcf_key_file="${key_dir}/${pcf_subdomain}/privkey.pem"
+pcf_cert_file="${key_dir}/${pcf_subdomain}/cert.pem"
 TFVARS
 }
 
@@ -179,8 +181,8 @@ secrets () {
 
   # store the certificates we generated
   safe set ${deploy_secret_root}/poe_ssl_name1 value="${env_id}-default-cert"
-  safe set ${deploy_secret_root}/poe_ssl_cert1 value="$(cat "${key_dir}/${pcf_subdomain}/cert.pem")"
-  safe set ${deploy_secret_root}/poe_ssl_key1 value="$(cat "${key_dir}/${pcf_subdomain}/privkey.pem")"
+  safe set ${deploy_secret_root}/poe_ssl_cert1 value="$(cat "$pcf_tls_cert_file")"
+  safe set ${deploy_secret_root}/poe_ssl_key1 value="$(cat "$pcf_tls_key_file")"
   safe set ${deploy_secret_root}/opsman_trusted_certs value=""
 
   # credhub
@@ -723,18 +725,15 @@ if [ $# -gt 0 ]; then
   exit
 fi
 
-patch
-infra
-
 prepare_concourse
 concourse_login
 download
+set -e
 patch
 infra
-set -e
 secrets
 params
 pipelines
 install
-credhub
-ldap
+# credhub
+# ldap

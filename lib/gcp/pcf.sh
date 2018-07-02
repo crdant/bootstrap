@@ -1,3 +1,7 @@
+pcf_service_account_name="${short_id}-pcf"
+pcf_service_account="${pcf_service_account_name}@${project}.iam.gserviceaccount.com"
+pcf_key_file=${key_dir}/${pcf_service_account}.json
+
 install_iaas_params() {
   # GCP specific - figure out how to handle it
   safe set ${team_secret_root}/gcp_service_account_key value="$(cat ${pcf_key_file})"
