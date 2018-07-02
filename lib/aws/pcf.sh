@@ -10,6 +10,7 @@ install_iaas_params () {
   safe set ${deploy_secret_root}/director_certificates value="$(cat ${ca_cert_file})"
 
   cat <<PARAMS >> ${pcf_install_parameter_file}
+terraform_prefix: pcf-${short_id}
 # AWS basics
 aws_az1: ${availability_zone_1}
 aws_az2: ${availability_zone_2}
