@@ -10,7 +10,7 @@ install_iaas_params () {
   safe set ${deploy_secret_root}/director_certificates value="$(cat ${ca_cert_file})"
 
   cat <<PARAMS >> ${pcf_install_parameter_file}
-terraform_prefix: pcf-${short_id}
+terraform_prefix: ${short_id}
 # AWS basics
 aws_az1: ${availability_zone_1}
 aws_az2: ${availability_zone_2}
@@ -19,7 +19,7 @@ aws_cert_arn: ${pcf_wildcard_cert_arn}
 aws_key_name: ${env_id}-pcf-key
 aws_region: ${region}
 # networking
-amis_nat: ami-303b1458
+amis_nat: ami-0541ea7d
 dynamic_services_subnet_cidr_az1: 172.24.112.0/22
 dynamic_services_subnet_cidr_az2: 172.24.128.0/22
 dynamic_services_subnet_cidr_az3: 172.24.144.0/22
