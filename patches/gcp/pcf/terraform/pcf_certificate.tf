@@ -1,12 +1,32 @@
-variable "pcf_subdomain" {
-  type = "string"
-}
-
 variable "pcf_system_subdomain" {
   type = "string"
 }
 
 variable "pcf_apps_subdomain" {
+  type = "string"
+}
+
+variable "pcf_cert_file" {
+  type = "string"
+}
+
+variable "pcf_key_file" {
+  type = "string"
+}
+
+variable "pcf_chain_file" {
+  type = "string"
+}
+
+variable "opsman_dns_name" {
+  type = "string"
+}
+
+variable "om_cert_file" {
+  type = "string"
+}
+
+variable "om_key_file" {
   type = "string"
 }
 
@@ -37,15 +57,39 @@ resource "acme_certificate" "pcf_wildcard" {
 
 resource "local_file" "pcf_cert_file" {
   content  = "${acme_certificate.pcf.certificate_pem}"
-  filename = "${var.pcf_wildcard_cert}"
+  filename = "${var.pcf_cert_file}"
 }
 
 resource "local_file" "pcf_key_file" {
   content  = "${acme_certificate.pcf.private_key_pem}"
-  filename = "${var.pcf_wildcard_key}"
+  filename = "${var.pcf_key_file}"
 }
 
 resource "local_file" "pcf_chain_file" {
   content  = "${acme_certificate.pcf.issuer_pem}"
-  filename = "${var.pcf_wildcard_chain}"
+  filename = "${var.pcf_chain_file}"
+}
+
+resource "acme_certificate" "opsman" {
+  account_key_pem           = "${acme_registration.letsencrypt.account_key_pem}"
+  common_name               = "${var.opsman_dns_name}"
+
+  dns_challenge {
+    provider = "gcloud"
+
+    config {
+      GCE_SERVICE_ACCOUNT_FILE="${local_file.service_account_key.filename}"
+      GCE_PROJECT="${var.project_id}"
+    }
+  }
+}
+
+resource "local_file" "om_cert" {
+  content  = "${acme_certificate.opsman.certificate_pem}"
+  filename = "${var.om_cert_file}"
+}
+
+resource "local_file" "om_key" {
+  content  = "${acme_certificate.opsman.private_key_pem}"
+  filename = "${var.om_key_file}"
 }
