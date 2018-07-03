@@ -14,6 +14,10 @@ variable "pcf_key_file" {
   type = "string"
 }
 
+variable "pcf_chain_file" {
+  type = "string"
+}
+
 variable "opsman_dns_name" {
   type = "string"
 }
