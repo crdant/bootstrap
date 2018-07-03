@@ -1,7 +1,3 @@
-variable "pcf_subdomain" {
-  type = "string"
-}
-
 variable "pcf_system_subdomain" {
   type = "string"
 }
@@ -15,6 +11,18 @@ variable "pcf_cert_file" {
 }
 
 variable "pcf_key_file" {
+  type = "string"
+}
+
+variable "opsman_dns_name" {
+  type = "string"
+}
+
+variable "om_cert_file" {
+  type = "string"
+}
+
+variable "om_key_file" {
   type = "string"
 }
 
@@ -66,6 +74,32 @@ resource "local_file" "pcf_cert" {
 resource "local_file" "pcf_key" {
   content  = "${acme_certificate.pcf_wildcard.private_key_pem}"
   filename = "${var.pcf_key_file}"
+}
+
+resource "acme_certificate" "opsman" {
+  account_key_pem           = "${acme_registration.letsencrypt.account_key_pem}"
+  common_name               = "${var.opsman_dns_name}"
+
+  dns_challenge {
+    provider = "route53"
+
+    config {
+      AWS_HOSTED_ZONE_ID    = "${aws_route53_zone.pcf_dns_zone.id}"
+      AWS_ACCESS_KEY_ID     = "${var.access_key}"
+      AWS_SECRET_ACCESS_KEY = "${var.secret_key}"
+      AWS_DEFAULT_REGION    = "${var.region}"
+    }
+  }
+}
+
+resource "local_file" "om_cert" {
+  content  = "${acme_certificate.opsman.certificate_pem}"
+  filename = "${var.om_cert_file}"
+}
+
+resource "local_file" "om_key" {
+  content  = "${acme_certificate.opsman.private_key_pem}"
+  filename = "${var.om_key_file}"
 }
 
 output "pcf_wildcard_cert_arn" {

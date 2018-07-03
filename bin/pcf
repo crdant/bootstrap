@@ -49,6 +49,9 @@ opsman_fqdn="${opsman_host}.${pcf_subdomain}"
 pcf_tls_key_file="${key_dir}/${pcf_subdomain}/privkey.pem"
 pcf_tls_cert_file="${key_dir}/${pcf_subdomain}/cert.pem"
 
+om_tls_key_file="${key_dir}/${opsman_fqdn}/privkey.pem"
+om_tls_cert_file="${key_dir}/${opsman_fqdn}/cert.pem"
+
 mysql_backup_bucket=${short_id}-mysql-backups
 mysql_backup_schedule="0 0/72 * * *"
 
@@ -66,17 +69,16 @@ pcf_subdomain="${pcf_subdomain}"
 pcf_system_subdomain="${pcf_system_subdomain}"
 pcf_apps_subdomain="${pcf_apps_subdomain}"
 opsman_host="${opsman_host}"
-pcf_wildcard_cert="${key_dir}/${pcf_subdomain}/cert.pem"
-pcf_wildcard_key="${key_dir}/${pcf_subdomain}/privkey.pem"
-pcf_wildcard_chain="${key_dir}/${pcf_subdomain}/chain.pem"
-pcf_key_file="${key_dir}/${pcf_subdomain}/privkey.pem"
-pcf_cert_file="${key_dir}/${pcf_subdomain}/cert.pem"
+opsman_dns_name="${opsman_fqdn}"
+pcf_key_file="${pcf_tls_key_file}"
+pcf_cert_file="${pcf_tls_cert_file}"
+om_key_file="${om_tls_key_file}"
+om_cert_file="${om_tls_cert_file}"
 TFVARS
 }
 
 infra() {
   bbl up --state-dir ${state_dir} --debug
-
 }
 
 prepare_concourse() {
@@ -197,37 +199,37 @@ secrets () {
 
   # database Master Credentials
   safe set ${deploy_secret_root}/db_master_username value=pcf_master
-  safe gen ${deploy_secret_root}/db_master_password value
+  safe gen -l 40 ${deploy_secret_root}/db_master_password value
 
   # Usernames must be 16 characters or fewer
   safe set ${deploy_secret_root}/db_diego_username value=pcf_diego
-  safe gen ${deploy_secret_root}/db_diego_password value
+  safe gen -l 40 ${deploy_secret_root}/db_diego_password value
   safe set ${deploy_secret_root}/db_notifications_username value=pcf_notification
-  safe gen ${deploy_secret_root}/db_notifications_password value
+  safe gen -l 40 ${deploy_secret_root}/db_notifications_password value
   safe set ${deploy_secret_root}/db_autoscale_username value=pcf_autoscale
-  safe gen ${deploy_secret_root}/db_autoscale_password value
+  safe gen -l 40 ${deploy_secret_root}/db_autoscale_password value
   safe set ${deploy_secret_root}/db_uaa_username value=uaa
-  safe gen ${deploy_secret_root}/db_uaa_password value
+  safe gen -l 40 ${deploy_secret_root}/db_uaa_password value
   safe set ${deploy_secret_root}/db_app_usage_service_username value=pcf_app_usage
-  safe gen ${deploy_secret_root}/db_app_usage_service_password value
+  safe gen -l 40 ${deploy_secret_root}/db_app_usage_service_password value
   safe set ${deploy_secret_root}/db_ccdb_username value=pcf_ccdb
-  safe gen ${deploy_secret_root}/db_ccdb_password value
+  safe gen -l 40 ${deploy_secret_root}/db_ccdb_password value
   safe set ${deploy_secret_root}/db_routing_username value=pcf_routing
-  safe gen ${deploy_secret_root}/db_routing_password value
+  safe gen -l 40 ${deploy_secret_root}/db_routing_password value
 
   safe set ${deploy_secret_root}/db_accountdb_username value=pcf_accounts
-  safe gen ${deploy_secret_root}/db_accountdb_password value
+  safe gen -l 40 ${deploy_secret_root}/db_accountdb_password value
   safe set ${deploy_secret_root}/db_networkpolicyserverdb_username value=pcf_policy
-  safe gen ${deploy_secret_root}/db_networkpolicyserverdb_password value
+  safe gen -l 40 ${deploy_secret_root}/db_networkpolicyserverdb_password value
   safe set ${deploy_secret_root}/db_nfsvolumedb_username value=pcf_nfs
-  safe gen ${deploy_secret_root}/db_nfsvolumedb_password value
+  safe gen -l 40 ${deploy_secret_root}/db_nfsvolumedb_password value
   safe set ${deploy_secret_root}/db_silk_username value=pcf_silk
-  safe gen ${deploy_secret_root}/db_silk_password value
+  safe gen -l 40 ${deploy_secret_root}/db_silk_password value
   safe set ${deploy_secret_root}/db_locket_username value=pcf_locket
-  safe gen ${deploy_secret_root}/db_locket_password value
+  safe gen -l 40 ${deploy_secret_root}/db_locket_password value
 
   safe set ${deploy_secret_root}/db_credhub_username value=pcf_credhub
-  safe gen ${deploy_secret_root}/db_credhub_password value
+  safe gen -l 40 ${deploy_secret_root}/db_credhub_password value
 }
 
 pipelines() {
