@@ -96,7 +96,7 @@ instance_groups:
   vm_extensions:
   # replace with a VM extension from your BOSH Director's cloud config that will attach
   # sufficient ephemeral storage to VMs in this instance group.
-  - 50GB_ephemeral_disk
+  - 100GB_ephemeral_disk
   stemcell: trusty
   azs: [z1]
   networks: [{name: private}]
