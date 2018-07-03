@@ -48,6 +48,7 @@ opsman_fqdn="${opsman_host}.${pcf_subdomain}"
 
 pcf_tls_key_file="${key_dir}/${pcf_subdomain}/privkey.pem"
 pcf_tls_cert_file="${key_dir}/${pcf_subdomain}/cert.pem"
+pcf_tls_chain_file="${key_dir}/${pcf_subdomain}/chain.pem"
 
 om_tls_key_file="${key_dir}/${opsman_fqdn}/privkey.pem"
 om_tls_cert_file="${key_dir}/${opsman_fqdn}/cert.pem"
@@ -72,6 +73,7 @@ opsman_host="${opsman_host}"
 opsman_dns_name="${opsman_fqdn}"
 pcf_key_file="${pcf_tls_key_file}"
 pcf_cert_file="${pcf_tls_cert_file}"
+pcf_chain_file="${pcf_tls_chain_file}"
 om_key_file="${om_tls_key_file}"
 om_cert_file="${om_tls_cert_file}"
 TFVARS
@@ -197,9 +199,10 @@ secrets () {
   safe set ${deploy_secret_root}/credhub_encryption_key_name3 value="${env_id}-credhub-key-3"
   safe gen ${deploy_secret_root}/credhub_encryption_key_secret3 value
 
-  # database Master Credentials
-  safe set ${deploy_secret_root}/db_master_username value=pcf_master
-  safe gen -l 40 ${deploy_secret_root}/db_master_password value
+  # database Master Credentials, at the team level in case other pipelines leverage the
+  # terraform processing of `create-infrastructure`
+  safe set ${team_secret_root}/db_master_username value=pcf_master
+  safe gen -l 40 ${team_secret_root}/db_master_password value
 
   # Usernames must be 16 characters or fewer
   safe set ${deploy_secret_root}/db_diego_username value=pcf_diego
