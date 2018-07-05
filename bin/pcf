@@ -34,8 +34,6 @@ buildpack_upgrade_pipeline="upgrade-buildpacks"
 buildpack_upgrade_pipeline_file="${workdir}/pcf-pipelines/upgrade-buildpacks/pipeline.yml"
 buildpack_upgrade_parameter_file="${workdir}/${env_id}-${buildpack_upgrade_pipeline}-params.yml"
 
-ops_dir=${BASEDIR}/pipelines/ops
-
 pcf_dns_zone="pcf-${short_id}-zone"         # TO DO: See if I can get this from the Terraform state (or even the pipelines terraform file)
 
 pcf_subdomain="pcf.${subdomain}"
@@ -126,9 +124,25 @@ modernize_pipelines() {
 }
 
 adapt_pipelines() {
+  ops_dir=${BASEDIR}/pipelines/ops/install-pcf
   ops_file_args="$(find ${ops_dir}/*.yml 2>/dev/null | sort | sed 's/^/-o /' | xargs)"
   cp ${pcf_install_pipeline_file} ${pcf_install_pipeline_file}.orig
   cat "${pcf_install_pipeline_file}.orig" | yaml-patch ${ops_file_args} > ${pcf_install_pipeline_file}
+
+  ops_dir=${BASEDIR}/pipelines/ops/upgrade-pcf
+  ops_file_args="$(find ${ops_dir}/*.yml 2>/dev/null | sort | sed 's/^/-o /' | xargs)"
+  cp ${pcf_upgrade_pipeline_file} ${pcf_upgrade_pipeline_file}.orig
+  cat "${pcf_upgrade_pipeline_file}.orig" | yaml-patch ${ops_file_args} > ${pcf_upgrade_pipeline_file}
+
+  ops_dir=${BASEDIR}/pipelines/ops/upgrade-ops-manager
+  ops_file_args="$(find ${ops_dir}/*.yml 2>/dev/null | sort | sed 's/^/-o /' | xargs)"
+  cp ${om_upgrade_pipeline_file} ${om_upgrade_pipeline_file}.orig
+  cat "${om_upgrade_pipeline_file}.orig" | yaml-patch ${ops_file_args} > ${om_upgrade_pipeline_file}
+
+  ops_dir=${BASEDIR}/pipelines/ops/upgrade-buildpacks
+  ops_file_args="$(find ${ops_dir}/*.yml 2>/dev/null | sort | sed 's/^/-o /' | xargs)"
+  cp ${buildpack_upgrade_pipeline_file} ${buildpack_upgrade_pipeline_file}.orig
+  cat "${buildpack_upgrade_pipeline_file}.orig" | yaml-patch ${ops_file_args} > ${buildpack_upgrade_pipeline_file}
 }
 
 safe_auth () {
@@ -192,6 +206,7 @@ secrets () {
   # credhub
   primary_key_name="${env_id}-credhub-key-1"
 
+  safe set ${deploy_secret_root}/credhub_primary_encryption_name value=${primary_key_name}
   safe set ${deploy_secret_root}/credhub_encryption_key_name1 value=${primary_key_name}
   safe gen ${deploy_secret_root}/credhub_encryption_key_secret1 value
   safe set ${deploy_secret_root}/credhub_encryption_key_name2 value="${env_id}-credhub-key-2"
@@ -254,8 +269,25 @@ ert_major_minor_version: ${pas_version_regex} # ERT minor version to track (e.g 
 mysql_monitor_recipient_email: ${email}
 opsman_domain_or_ip_address: ${opsman_fqdn} #This must be your pcf_ert_domain with "opsman." as a prefix. For example, opsman.pcf.example.com
 opsman_major_minor_version: ${om_version_regex} # Ops Manager minor version to track (e.g ^2\.0\.[0-9]+$ will track 2.0.x versions)
-terraform_prefix: ${short_id}
+
 routing_tls_termination: load_balancer
+router_tls_ciphers: "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384"
+routing_custom_ca_certificates: ""
+routing_disable_http: true
+
+container_networking_nw_cidr: 10.20.73.0/16
+
+haproxy_backend_ca: ""
+haproxy_forward_tls: ""
+# not using HA proxy but get complaints without this set
+haproxy_tls_ciphers: "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384"
+
+internet_connected: false
+
+security_acknowledgement: X
+
+ert_errands_to_disable: ""
+
 PARAMS
   install_iaas_params
 }

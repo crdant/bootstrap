@@ -1,0 +1,8 @@
+# remove the hardcoded reset of the environment variable OPSMAN_DOMAIN_OR_IP_ADDRESS in the `configure-ert` task
+- op: replace
+  path: /jobs/name=deploy-ert/plan/0/aggregate/0/do/task=unpack-tarball/config/run/args
+  value:
+    - -c
+    - |
+      tar -xvf pcf-pipelines-tarball/*.tgz
+      sed -i 's/^export OPSMAN_DOMAIN_OR_IP_ADDRESS=.*/export OPSMAN_DOMAIN_OR_IP_ADDRESS=((opsman_domain_or_ip_address))/' pcf-pipelines/tasks/configure-ert/task.sh

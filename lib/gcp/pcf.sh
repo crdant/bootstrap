@@ -28,6 +28,10 @@ terraform_statefile_bucket: ${short_id}-terraform-state
 
 # database
 db_cloudsqldb_tier: db-f1-micro
+
+# router keep-alive support
+frontend_idle_timeout:  601
+
 PARAMS
 }
 
