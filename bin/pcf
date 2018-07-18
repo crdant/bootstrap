@@ -280,7 +280,7 @@ container_networking_nw_cidr: 10.20.73.0/16
 haproxy_backend_ca: ""
 haproxy_forward_tls: ""
 # not using HA proxy but get complaints without this set
-haproxy_tls_ciphers: "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384"
+haproxy_tls_ciphers: "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:TLS_RSA_WITH_AES_256_GCM_SHA384"
 
 internet_connected: false
 
@@ -598,7 +598,7 @@ stop () {
 
 exec_om () {
   safe_auth > /dev/null 2>&1
-  exec om --target https://opsman.${pcf_subdomain} --username `safe get ${team_secret_root}/opsman_admin_username:value` \
+  exec om --target https://${opsman_fqdn} --username `safe get ${team_secret_root}/opsman_admin_username:value` \
       --password `safe get ${team_secret_root}/opsman_admin_password:value` --skip-ssl-validation $@
 }
 
