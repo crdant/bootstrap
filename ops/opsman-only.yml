@@ -1,0 +1,9 @@
+### remove everything to do with PAS (nee ERT)
+- op: remove
+  path: /jobs/name=upload-ert
+
+- op: remove
+  path: /jobs/name=deploy-ert
+
+- op: remove
+  path: /resources/name=pivnet-elastic-runtime
