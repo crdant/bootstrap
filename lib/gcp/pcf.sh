@@ -24,6 +24,9 @@ terraform_statefile_bucket: ${short_id}-terraform-state
 
 # database
 db_cloudsqldb_tier: db-f1-micro
+
+# router - moved here because AWS needs a custom set
+router_tls_ciphers: ECDHE-RSA-AES128-GCM-SHA256:TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
 PARAMS
 }
 

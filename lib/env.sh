@@ -7,8 +7,8 @@ domain_token=`echo ${domain} | tr . -`
 subdomain="bbl.${iaas}.${domain}"
 subdomain_token=`echo ${subdomain} | tr . -`
 
-om_version_regex="^2\.0\.[0-9]+$"
-pas_version_regex="^2\.0\.[0-9]+$"
+om_version_regex="^2\.2\.[0-9]+$"
+pas_version_regex="^2\.2\.[0-9]+$"
 
 lib_dir="${BASEDIR}/lib"
 state_dir="${BASEDIR}/state"
@@ -47,3 +47,5 @@ fi
 
 dns_zone=`echo ${subdomain} | tr . -`
 dns_ttl=60
+
+security_acknowledgement=X

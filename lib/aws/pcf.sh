@@ -24,6 +24,7 @@ ROUTE_53_ZONE_ID: ${pcf_dns_zone_id}
 # For terraform state file (http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region)
 S3_ENDPOINT: https://s3.${region}.amazonaws.com
 S3_OUTPUT_BUCKET: ${pipeline_statefile_bucket}
+router_tls_ciphers: TLS_DHE_RSA_WITH_AES_256_GCM_SHA384:TLS_DHE_RSA_WITH_AES_128_GCM_SHA256
 PARAMS
 }
 

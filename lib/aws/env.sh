@@ -31,3 +31,5 @@ if [ -f ${cloud_config_vars_file} ] ; then
     grep "^vpc_id\|^subnet_id\|^az._subnet\|^internal_security_group\|^bootstrap_dns_zone_id\|^pipeline_statefile_bucket\|^default_key_name\|^pcf_wildcard_cert_arn\|^private_key\|^pcf_secret_acccess_key_id\|^pcf_secret_access_key\|^pcf_dns_zone_id\|^pcf_private_key_file")"
   eval "${cloud_config_vars}"
 fi
+
+# moved here because AWS needs a custom set

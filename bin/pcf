@@ -17,7 +17,7 @@ pcf_concourse_user=pivotal
 
 pcf_pipelines_remote="https://github.com/pivotal-cf/pcf-pipelines.git"
 pcf_pipelines_local=${workdir}/pcf-pipelines
-pcf_pipelines_version="v0.23.4"
+pcf_pipelines_version="v0.23.5"
 
 pcf_install_pipeline="deploy-pcf"
 pcf_install_pipeline_file="${workdir}/pcf-pipelines/install-pcf/${iaas}/pipeline.yml"
@@ -186,7 +186,7 @@ secrets () {
 
   # credhub
   primary_key_name="${env_id}-credhub-key-1"
-
+  safe set ${deploy_secret_root}/credhub_primary_encryption_name value=${primary_key_name}
   safe set ${deploy_secret_root}/credhub_encryption_key_name1 value=${primary_key_name}
   safe gen ${deploy_secret_root}/credhub_encryption_key_secret1 value
   safe set ${deploy_secret_root}/credhub_encryption_key_name2 value="${env_id}-credhub-key-2"
@@ -249,7 +249,24 @@ mysql_monitor_recipient_email: ${email}
 opsman_domain_or_ip_address: ${opsman_fqdn} #This must be your pcf_ert_domain with "opsman." as a prefix. For example, opsman.pcf.example.com
 opsman_major_minor_version: ${om_version_regex} # Ops Manager minor version to track (e.g ^2\.0\.[0-9]+$ will track 2.0.x versions)
 terraform_prefix: ${short_id}
+
+# routing
 routing_tls_termination: load_balancer
+routing_custom_ca_certificates:
+routing_disable_http: true
+
+# not using HA proxy
+haproxy_backend_ca: ""
+haproxy_forward_tls: ""
+haproxy_tls_ciphers: ""
+
+# container networking
+container_networking_nw_cidr: 10.20.73.0/24
+
+frontend_idle_timeout: 900
+internet_connected: false
+security_acknowledgement: ${security_acknowledgement}
+
 PARAMS
   install_iaas_params
 }
