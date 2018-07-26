@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 BASEDIR=$(dirname $(dirname $0))
 . "${BASEDIR}/lib/env.sh"
-. ${workdir}/bbl-env.sh
 
 env_id=`bbl env-id --state-dir ${state_dir}`
 

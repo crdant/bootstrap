@@ -85,7 +85,6 @@ client() {
 
 login() {
   echo "Logging into the $env_id director..."
-  . "${workdir}/bbl-env.sh"
   bosh log-in -e $(bbl env-id --state-dir ${state_dir}) --client="${BOSH_CLIENT}" --client-secret="${BOSH_CLIENT_SECRET}"
 }
 

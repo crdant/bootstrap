@@ -169,7 +169,6 @@ if [ $# -gt 0 ]; then
   exit
 fi
 
-ssl_certificates
 stemcell
 releases
 patch
