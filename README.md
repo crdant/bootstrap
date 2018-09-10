@@ -15,7 +15,7 @@ setup. Currently working with AWS and GCP.
 1. Run `prepare` to prepare infrastructure and the bootstrap BOSH environment
 1. Make sure DNS for your bootstrap subdomain is delegated from your primary zone (if needed).
 1. Run `secrets` to make Vault available for secrets.
-1. Configure `secrets` for the bootstrap environment by running `configure`.
+1. Configure the secrets for the bootstrap environment by running `configure`.
 1. Add concourse to the environment with `concourse`.
 1. (optional) Add LDAP to the environment with `ldap`.
 1. Set the environment variable `PIVNET_TOKEN` to your Pivotal Network API token.
