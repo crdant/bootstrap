@@ -1,6 +1,6 @@
 stemcell_iaas="aws-xen-hvm"
 
-region="us-west-2"
+region="$(aws configure get region)"
 availability_zone_1="${region}a"
 availability_zone_2="${region}b"
 availability_zone_3="${region}c"
@@ -16,8 +16,8 @@ dns_zone_file="${workdir}/${subdomain_token}-dns-zone.json"
 #   access_key_id=${bbl_secret_access_key_id}
 #   secret_access_key=${bbl_secret_access_key}
 # else
-  access_key_id=${AWS_ACCESS_KEY_ID}
-  secret_access_key=${AWS_SECRET_ACCESS_KEY}
+  access_key_id="$(aws configure get aws_access_key_id)"
+  secret_access_key="$(aws configure get aws_secret_access_key)"
 # fi
 
 certbot_dns_args="--dns-route53 --dns-route53-propagation-seconds 120"
