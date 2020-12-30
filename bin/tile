@@ -11,6 +11,8 @@ concourse_url=`concourse url`
 parameter_file="${workdir}/${slug}-upgrade-params.yml"
 pipeline_file=${workdir}/pcf-pipelines/upgrade-tile/pipeline.yml
 
+opsman_host="opsman"
+
 
 opsman_username=$(pcf team_secret opsman_admin_username)
 opsman_password=$(pcf team_secret opsman_admin_password)

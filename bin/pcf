@@ -258,7 +258,8 @@ routing_disable_http: true
 # not using HA proxy
 haproxy_backend_ca: ""
 haproxy_forward_tls: ""
-haproxy_tls_ciphers: ""
+# but these need to be set anywayf
+haproxy_tls_ciphers: "DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384"
 
 # container networking
 container_networking_nw_cidr: 10.20.73.0/24
@@ -266,6 +267,9 @@ container_networking_nw_cidr: 10.20.73.0/24
 frontend_idle_timeout: 900
 internet_connected: false
 security_acknowledgement: ${security_acknowledgement}
+
+# don't disable errands
+ert_errands_to_disable: ""
 
 PARAMS
   install_iaas_params
