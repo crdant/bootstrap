@@ -1,20 +1,32 @@
 account=cdantonio@pivotal.io
 email=${account}
+iaas=azure
+
 domain=crdant.io
-project=fe-cdantonio
-
 domain_token=`echo ${domain} | tr . -`
-subdomain="bbl.gcp.${domain}"
+subdomain="bbl.${iaas}.${domain}"
 
+# for Google
+project=fe-cdantonio
 region="us-central1"
 storage_location="us"
 availability_zone_1="${region}-f"
 availability_zone_2="${region}-c"
 availability_zone_3="${region}-b"
-
-# TO DO: fixed up to env_id next time I tear down
 service_account_name=`echo ${subdomain} | tr . -`
 service_account="${service_account_name}@${project}.iam.gserviceaccount.com"
+
+# for azure
+azure_client_id=
+
+# flags for calling bbl
+if [ "${iaas}" = "gcp" ] ; then
+  iaas_auth_flag="--gcp-service-account-key ${key_file}"
+  iaas_location_flag="--gcp-service-account-key ${key_file}"
+elif [ "${iaas}" = "azure" ] ; then
+  iaas_auth_flag="--azure-client-id ${client_id}"
+fi
+
 
 key_dir="${BASEDIR}/keys"
 key_file="${key_dir}/${project}-${service_account_name}.json"
@@ -32,9 +44,9 @@ city="Cambridge"
 organization="${domain}"
 
 if [ -f "${BASEDIR}/bbl-state.json" ] ; then
-  jumpbox=`bbl jumpbox-address --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" | cut -d':' -f1 `
-  env_id=`bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}"`
-  short_id=`bbl env-id --gcp-service-account-key "${key_file}" --gcp-project-id "${project}" | sed s/bbl-env-// | cut -dt -f1`
+  jumpbox=`bbl jumpbox-address $iaas_auth_flag| cut -d':' -f1 `
+  env_id=`bbl env-id --gcp-service-account-key "${key_file}"`
+  short_id=`bbl env-id $iaas_auth_flag| sed s/bbl-env-// | cut -dt -f1`
 else
   env_id=`echo ${subdomain} | tr . -`
 fi

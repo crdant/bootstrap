@@ -14,7 +14,7 @@ pcf_install_pipeline="deploy-pcf"
 pcf_pipelines_remote="https://github.com/pivotal-cf/pcf-pipelines.git"
 pcf_pipelines_local=${workdir}/pcf-pipelines
 pcf_pipelines_version="v0.19.0"
-pipeline_file="${workdir}/pcf-pipelines/install-pcf/gcp/pipeline.yml"
+pipeline_file="${workdir}/pcf-pipelines/install-pcf/${iaas}/pipeline.yml"
 parameter_file="${workdir}/${env_id}-${pcf_install_pipeline}-params.yml"
 
 pcf_service_account_name="pcf-${short_id}"
